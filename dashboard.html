@@ -1,0 +1,3192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TASL — Talent Acquisition Analytics · FY 2025–26</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══ TOKENS ═════════════════════════════════════════════════ */
+:root{
+  --navy:      #00205C;
+  --navy2:     #001440;
+  --tata:      #005A9E;
+  --tataL:     #0078C8;
+  --accent:    #C8102E;
+  --white:     #FFFFFF;
+  --off:       #F4F6FA;
+  --g50:       #F8FAFD;
+  --g100:      #EFF2F8;
+  --g200:      #DDE3EE;
+  --g300:      #B8C4D8;
+  --g500:      #7A8FAA;
+  --t1:        #0A1628;
+  --t2:        #334E6B;
+  --t3:        #7A8FAA;
+  --tw:        #FFFFFF;
+  --twm:       rgba(255,255,255,0.82);
+  --twd:       rgba(255,255,255,0.45);
+  --green:     #007A4D;
+  --amber:     #B85C00;
+  --red:       #C8102E;
+  --purple:    #6040A0;
+  --orange:    #C84800;
+  --cyan:      #005A9E;
+  --hdr-h:     76px;
+  --r:         6px;
+  --r2:        10px;
+  --fh: 'Barlow Condensed', sans-serif;
+  --fb: 'Barlow', sans-serif;
+  --fm: 'JetBrains Mono', monospace;
+  --shadow-xs: 0 1px 3px rgba(0,20,80,0.07);
+  --shadow-sm: 0 2px 8px rgba(0,20,80,0.09),0 1px 3px rgba(0,20,80,0.05);
+  --shadow-md: 0 6px 24px rgba(0,20,80,0.13);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--fb);background:var(--off);color:var(--t1);font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.6;}
+
+/* ═══ HEADER ═════════════════════════════════════════════════ */
+.hdr{
+  position:sticky;top:0;z-index:200;
+  height:var(--hdr-h);
+  background:linear-gradient(100deg, var(--navy2) 0%, var(--navy) 50%, #003580 100%);
+  display:flex;align-items:center;padding:0 28px;
+  box-shadow:0 2px 16px rgba(0,10,50,0.4);
+  border-bottom:2px solid var(--accent);
+}
+.hdr-logo{display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.hdr-logo-pill{background:#FFFFFF;border-radius:10px;padding:7px 14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+.hdr-logo-pill img{height:44px;width:auto;display:block;}
+.hdr-sep{width:1px;height:44px;background:rgba(255,255,255,0.18);margin:0 28px;flex-shrink:0;}
+.hdr-title{flex:1;min-width:0;}
+.hdr-title h1{font-family:var(--fh);font-size:20px;font-weight:700;letter-spacing:1px;color:var(--tw);text-transform:uppercase;line-height:1.1;white-space:nowrap;}
+.hdr-title p{font-size:11px;color:var(--twd);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.nav{display:flex;gap:2px;background:rgba(0,0,0,0.18);border-radius:7px;padding:3px;}
+.nbtn{background:transparent;border:none;color:var(--twm);cursor:pointer;
+  font-family:var(--fh);font-size:13px;font-weight:700;
+  padding:8px 18px;border-radius:5px;text-transform:uppercase;
+  letter-spacing:0.8px;transition:all 0.16s;white-space:nowrap;}
+.nbtn:hover{color:var(--tw);background:rgba(255,255,255,0.10);}
+.nbtn.on{background:var(--accent);color:var(--tw);box-shadow:0 1px 6px rgba(200,16,46,0.4);}
+.hdr-badge{display:none;}
+.dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0;}
+.dot.pulse{animation:pulse 2.5s ease infinite;}
+.dot.warn{background:#f59e0b;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.45;transform:scale(0.75)}}
+.ts-lbl{font-family:var(--fm);font-size:9px;color:var(--twd);}
+.btn-refresh{display:none;}
+
+/* ═══ LAYOUT ═════════════════════════════════════════════════ */
+.main{padding:24px 28px 60px;max-width:1700px;margin:0 auto;}
+.section{display:none;}
+.section.on{display:block;animation:fadeIn 0.2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* PAGE HEADER */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:14px;border-bottom:2px solid var(--navy);}
+.ph-l{display:flex;align-items:baseline;gap:14px;}
+.pt{font-family:var(--fh);font-size:26px;font-weight:700;color:var(--navy);letter-spacing:0.5px;text-transform:uppercase;}
+.ps{font-size:13px;color:var(--t3);}
+.ph-badge{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  padding:4px 10px;border-radius:3px;background:var(--navy);color:var(--tw);}
+
+/* GRID SYSTEM */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+.g31{display:grid;grid-template-columns:5fr 2fr;gap:14px;margin-bottom:14px;}
+.g211{display:grid;grid-template-columns:5fr 2fr 2fr;gap:14px;margin-bottom:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;}
+.vcol{display:flex;flex-direction:column;gap:14px;}
+.mb14{margin-bottom:14px;}
+
+/* CARD */
+.cc{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:20px 22px;box-shadow:var(--shadow-xs);}
+.cct{font-family:var(--fh);font-size:16px;font-weight:700;color:var(--t1);
+  letter-spacing:0.4px;text-transform:uppercase;margin-bottom:4px;}
+.ccs{font-size:12px;color:var(--t3);margin-bottom:18px;line-height:1.5;}
+.cc-divider{height:1px;background:var(--g100);margin:14px -22px;}
+
+/* KPI STRIP */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1px solid var(--g200);
+  border-left:4px solid var(--kc,var(--navy));
+  border-radius:var(--r);padding:16px 18px 14px;
+  box-shadow:var(--shadow-xs);transition:box-shadow 0.18s,transform 0.18s;
+  animation:fadeUp 0.35s both;}
+.kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--t3);margin-bottom:10px;}
+.kv{font-family:var(--fh);font-size:42px;font-weight:700;line-height:1;color:var(--t1);margin-bottom:8px;}
+.kv sup{font-size:18px;}
+.kt{font-size:11px;font-weight:600;padding:3px 9px;border-radius:3px;
+  background:var(--ktbg,var(--g100));color:var(--ktc,var(--t2));}
+
+/* DONUT */
+.dw-wrap{display:flex;align-items:center;gap:20px;}
+.dw-canvas-wrap{position:relative;flex-shrink:0;}
+.dw-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
+.dw-center-v{font-family:var(--fh);font-size:28px;font-weight:700;color:var(--t1);line-height:1;}
+.dw-center-l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--t3);margin-top:4px;}
+.dl{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:12px;flex:1;min-width:0;}
+.dl li{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.dll{display:flex;align-items:center;gap:8px;color:var(--t2);}
+.dld{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.dlv{font-family:var(--fh);font-size:24px;font-weight:700;color:var(--t1);}
+.dlp{color:var(--t3);font-size:11px;margin-left:4px;}
+
+/* BAR LIST */
+.bl{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.bli{display:flex;align-items:center;gap:10px;}
+.bln{width:110px;flex-shrink:0;font-size:13px;font-weight:500;color:var(--t2);}
+.blt{flex:1;height:5px;background:var(--g200);border-radius:3px;overflow:hidden;}
+.blf{height:100%;border-radius:3px;transition:width 0.5s cubic-bezier(.4,0,.2,1);}
+.blv{width:64px;text-align:right;font-family:var(--fm);font-size:12px;color:var(--t1);flex-shrink:0;}
+
+/* STAT ROW */
+.srow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+.smi{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);
+  padding:16px 18px;text-align:center;box-shadow:var(--shadow-xs);}
+.smv{font-family:var(--fh);font-size:34px;font-weight:700;letter-spacing:-0.3px;}
+.sml{font-size:11px;color:var(--t3);margin-top:6px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;}
+
+/* LEGEND */
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;}
+.li{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--t2);}
+.ld{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+/* TABLE */
+.htm{width:100%;border-collapse:collapse;font-size:13px;}
+.htm th{text-align:left;padding:10px 14px;
+  font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--tw);background:var(--navy);white-space:nowrap;}
+.htm th:first-child{border-radius:4px 0 0 0;}.htm th:last-child{border-radius:0 4px 0 0;}
+.htm td{padding:10px 14px;border-bottom:1px solid var(--g100);color:var(--t2);vertical-align:middle;}
+.htm tbody tr:nth-child(even) td{background:var(--g50);}
+.htm tbody tr:hover td{background:#ECF2FF;}
+.htm tfoot td{padding:9px 12px;background:var(--g100);border-top:2px solid var(--g300);font-weight:700;color:var(--t1);}
+.row-max td{background:rgba(0,90,158,0.06)!important;font-weight:700;}
+.row-max td:first-child{border-left:3px solid var(--tata);}
+.row-min td{background:rgba(200,16,46,0.04)!important;}
+.cell-hot{background:rgba(200,16,46,0.08)!important;color:var(--red)!important;font-weight:700;}
+.cell-warm{background:rgba(184,92,0,0.08)!important;color:var(--amber)!important;font-weight:700;}
+.cell-cool{background:rgba(0,122,77,0.08)!important;color:var(--green)!important;font-weight:700;}
+
+/* TAT BANDS */
+.tbands{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+.tband{background:var(--g100);border:1px solid var(--g200);border-radius:var(--r);padding:16px;text-align:center;}
+.tbv{font-family:var(--fh);font-size:38px;font-weight:700;}
+.tbl{font-size:11px;color:var(--t3);margin-top:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;}
+
+/* ALERT */
+.al{border-radius:var(--r);padding:12px 14px;font-size:11.5px;line-height:1.7;
+  border-left:3px solid;background:var(--g100);}
+.al strong{display:block;margin-bottom:3px;}
+.al-n{border-left-color:var(--navy);}.al-n strong{color:var(--navy);}
+.al-g{border-left-color:var(--green);}.al-g strong{color:var(--green);}
+.al-a{border-left-color:var(--amber);}.al-a strong{color:var(--amber);}
+.al-r{border-left-color:var(--red);}.al-r strong{color:var(--red);}
+
+/* INSIGHT GRID */
+.ig{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;margin-bottom:22px;}
+.inf{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:20px 20px 20px 22px;border-left:4px solid var(--iclr,var(--navy));
+  box-shadow:var(--shadow-xs);transition:box-shadow 0.18s,transform 0.18s;}
+.inf:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.inf-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.inf-badge{font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;
+  padding:4px 10px;border-radius:3px;background:var(--ibg,var(--g100));color:var(--iclr,var(--navy));flex-shrink:0;}
+.inf-flag{font-family:var(--fh);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:3px;
+  background:rgba(200,16,46,0.1);color:var(--red);flex-shrink:0;text-transform:uppercase;}
+.itl{font-family:var(--fh);font-size:17px;font-weight:700;color:var(--t1);margin-bottom:10px;line-height:1.25;text-transform:uppercase;}
+.itx{font-size:13.5px;color:var(--t2);line-height:1.8;}
+.itx strong{color:var(--t1);}
+
+/* EXEC SUMMARY */
+/* Hero stat — spans full grid, dominant */
+.exec-hero-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:14px;margin-bottom:16px;align-items:stretch;}
+.exec-stat-hero{
+  background:linear-gradient(135deg,var(--navy2) 0%,var(--navy) 60%,#003580 100%);
+  border:none;border-radius:12px;
+  padding:30px 32px;
+  box-shadow:0 8px 32px rgba(0,20,80,0.22);
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+.exec-stat-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:rgba(255,255,255,0.04);
+}
+.exec-stat-hero::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),#FF6B6B);
+}
+.exec-stat-hero .ev{font-family:var(--fh);font-size:80px;font-weight:700;color:#fff;line-height:1;margin-bottom:8px;}
+.exec-stat-hero .ev sup{font-size:28px;}
+.exec-stat-hero .el{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.6);}
+.exec-stat-hero .esub{font-size:13px;color:rgba(255,255,255,0.45);margin-top:10px;}
+.exec-stat-hero .hero-tag{
+  display:inline-block;font-family:var(--fh);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;
+  padding:4px 12px;border-radius:3px;
+  background:var(--accent);color:#fff;
+  margin-bottom:20px;width:fit-content;
+}
+
+/* Secondary stat cards */
+.exec-stat{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:24px 22px 20px;border-top:4px solid var(--ec,var(--navy));box-shadow:var(--shadow-sm);
+  transition:box-shadow 0.18s,transform 0.18s;display:flex;flex-direction:column;justify-content:space-between;}
+.exec-stat:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.exec-stat .ev{font-family:var(--fh);font-size:52px;font-weight:700;color:var(--t1);line-height:1;margin-bottom:6px;}
+.exec-stat .ev sup{font-size:20px;}
+.exec-stat .el{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--t3);}
+.exec-stat .esub{font-size:12px;color:var(--t3);margin-top:8px;}
+
+/* Highlight cards — narrative flow with visual weight */
+.exec-narrative{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:16px;}
+.hlcard-lead{
+  background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:24px 26px 24px 28px;border-left:5px solid var(--hlc,var(--tata));
+  box-shadow:var(--shadow-sm);
+}
+.hlcard-lead .hlt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:10px;}
+.hlcard-lead .hlv{font-family:var(--fh);font-size:30px;font-weight:700;color:var(--t1);margin-bottom:8px;line-height:1.1;}
+.hlcard-lead .hlx{font-size:13.5px;color:var(--t2);line-height:1.75;}
+.hlcard{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:18px 20px 18px 22px;border-left:4px solid var(--hlc,var(--tata));box-shadow:var(--shadow-xs);}
+.hlcard .hlt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;}
+.hlcard .hlv{font-family:var(--fh);font-size:22px;font-weight:700;color:var(--t1);margin-bottom:6px;}
+.hlcard .hlx{font-size:13px;color:var(--t2);line-height:1.7;}
+
+/* Alert card — for flags */
+.exec-alert{
+  background:rgba(200,16,46,0.05);border:1px solid rgba(200,16,46,0.2);
+  border-radius:var(--r2);padding:16px 20px;
+  display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;
+}
+.exec-alert-icon{font-size:22px;flex-shrink:0;line-height:1;}
+.exec-alert-body strong{display:block;font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px;}
+.exec-alert-body p{font-size:12.5px;color:var(--t2);line-height:1.6;}
+
+/* SECTION DIVIDER */
+.sdiv{display:flex;align-items:baseline;gap:14px;margin:22px 0 16px;
+  padding-bottom:10px;border-bottom:1px solid var(--g200);}
+.sdiv .pt{font-size:16px;}
+
+/* ══ PRIORITY ALERT — THE ONE PROBLEM ═══════════════════════ */
+.priority-banner{
+  background:linear-gradient(135deg,#1A0010 0%,var(--red) 100%);
+  border-radius:var(--r2);padding:20px 28px;margin-bottom:18px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 4px 20px rgba(200,16,46,0.35);
+  animation:pulseGlow 3s ease-in-out infinite;
+  position:relative;overflow:hidden;
+}
+.priority-banner::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,0.02) 20px,rgba(255,255,255,0.02) 40px);
+  pointer-events:none;
+}
+@keyframes pulseGlow{
+  0%,100%{box-shadow:0 4px 20px rgba(200,16,46,0.35);}
+  50%{box-shadow:0 6px 32px rgba(200,16,46,0.55),0 0 0 3px rgba(200,16,46,0.15);}
+}
+.priority-banner-label{
+  flex-shrink:0;background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:6px;padding:8px 14px;text-align:center;
+}
+.priority-banner-label .pbl-eye{font-size:22px;line-height:1;}
+.priority-banner-label .pbl-txt{font-family:var(--fh);font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.8);margin-top:4px;}
+.priority-banner-body{flex:1;min-width:0;}
+.priority-banner-body .pb-tag{font-family:var(--fh);font-size:9.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.55);margin-bottom:6px;}
+.priority-banner-body .pb-headline{font-family:var(--fh);font-size:22px;font-weight:700;
+  color:#fff;line-height:1.15;margin-bottom:6px;}
+.priority-banner-body .pb-detail{font-size:13px;color:rgba(255,255,255,0.72);line-height:1.6;}
+.priority-banner-metric{flex-shrink:0;text-align:center;
+  background:rgba(0,0,0,0.25);border-radius:8px;padding:12px 18px;min-width:90px;}
+.priority-banner-metric .pm-v{font-family:var(--fh);font-size:38px;font-weight:700;
+  color:#fff;line-height:1;}
+.priority-banner-metric .pm-l{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.2px;color:rgba(255,255,255,0.55);margin-top:4px;}
+
+/* ══ "SO WHAT" ANCHOR BAR ═══════════════════════════════════ */
+.so-what{
+  background:var(--navy2);border-radius:var(--r2);
+  padding:14px 22px;margin-bottom:18px;
+  display:flex;align-items:center;gap:14px;
+  border-left:4px solid var(--tataL);
+}
+.so-what-q{font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.5px;color:rgba(255,255,255,0.4);flex-shrink:0;white-space:nowrap;}
+.so-what-a{font-size:13.5px;color:#fff;line-height:1.5;font-weight:500;}
+.so-what-a strong{color:#7EC8FF;}
+.so-what-verdict{flex-shrink:0;font-family:var(--fh);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;padding:5px 12px;border-radius:4px;}
+.verdict-ok{background:rgba(0,122,77,0.25);color:#4DFFB4;border:1px solid rgba(0,122,77,0.4);}
+.verdict-warn{background:rgba(184,92,0,0.3);color:#FFCF6B;border:1px solid rgba(184,92,0,0.4);}
+.verdict-critical{background:rgba(200,16,46,0.3);color:#FF8099;border:1px solid rgba(200,16,46,0.4);}
+
+/* ══ NARRATIVE POV TITLE BAR ════════════════════════════════ */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--navy);}
+.ph-pov{font-size:13px;color:var(--t2);margin-top:6px;line-height:1.5;max-width:600px;}
+.ph-pov strong{color:var(--navy);}
+
+/* ══ HIGHLIGHT CARD — enhanced lead ═════════════════════════ */
+.hlcard-lead{
+  background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:24px 26px 24px 28px;border-left:5px solid var(--hlc,var(--tata));
+  box-shadow:var(--shadow-sm);
+}
+.hlcard-lead .hlt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:10px;}
+.hlcard-lead .hlv{font-family:var(--fh);font-size:30px;font-weight:700;color:var(--t1);margin-bottom:8px;line-height:1.1;}
+.hlcard-lead .hlx{font-size:13.5px;color:var(--t2);line-height:1.75;}
+.hlcard{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:18px 20px 18px 22px;border-left:4px solid var(--hlc,var(--tata));box-shadow:var(--shadow-xs);}
+.hlcard .hlt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;}
+.hlcard .hlv{font-family:var(--fh);font-size:22px;font-weight:700;color:var(--t1);margin-bottom:6px;}
+.hlcard .hlx{font-size:13px;color:var(--t2);line-height:1.7;}
+
+/* ══ VERDICT TAGS ON SECTION SUBTITLES ═════════════════════ */
+.ccs-verdict{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.9px;padding:3px 9px;border-radius:3px;margin-left:8px;}
+.cv-ok{background:rgba(0,122,77,0.1);color:var(--green);}
+.cv-warn{background:rgba(184,92,0,0.1);color:var(--amber);}
+.cv-bad{background:rgba(200,16,46,0.1);color:var(--red);}
+
+/* WATERMARK */
+.wm{position:fixed;bottom:14px;right:18px;font-size:9.5px;color:var(--t3);
+  font-family:var(--fm);z-index:10;pointer-events:none;opacity:0.6;}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--navy);color:var(--tw);border-radius:var(--r);
+  padding:11px 22px;font-size:12.5px;font-weight:600;
+  box-shadow:0 8px 24px rgba(0,20,100,0.3);opacity:0;
+  transition:all 0.2s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* UPLOAD OVERLAY */
+#uploadOverlay{display:none;position:fixed;inset:0;z-index:600;
+  background:linear-gradient(140deg,var(--navy2) 0%,var(--navy) 60%,#00357A 100%);
+  align-items:center;justify-content:center;flex-direction:column;gap:24px;}
+#uploadOverlay.open{display:flex;}
+.ub{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+  border-radius:16px;padding:48px 52px;text-align:center;max-width:460px;backdrop-filter:blur(8px);}
+.ub-logo{height:50px;width:auto;margin-bottom:22px;background:#fff;border-radius:8px;padding:6px 10px;}
+.ub h2{font-family:var(--fh);font-size:24px;font-weight:700;text-transform:uppercase;
+  color:var(--tw);letter-spacing:1px;margin-bottom:8px;}
+.ub p{font-size:13px;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:28px;}
+.ub-drop{border:2px dashed rgba(255,255,255,0.2);border-radius:8px;
+  padding:28px 20px;cursor:pointer;transition:all 0.2s;margin-bottom:14px;
+  background:rgba(255,255,255,0.02);}
+.ub-drop:hover,.ub-drop.drag{border-color:#22c55e;background:rgba(34,197,94,0.06);}
+.ub-drop span{display:block;font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);}
+.ub-btn{display:inline-flex;align-items:center;gap:9px;background:white;color:var(--navy);
+  border:none;border-radius:var(--r);cursor:pointer;font-family:var(--fh);
+  font-size:14px;font-weight:700;padding:12px 28px;text-transform:uppercase;
+  transition:all 0.18s;width:100%;justify-content:center;letter-spacing:0.8px;}
+.ub-btn:hover{background:#DCE7FF;}
+.ub-note{font-size:9.5px;color:rgba(255,255,255,0.28);margin-top:14px;}
+
+/* REFRESH MODAL */
+#refreshModal{display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,15,60,0.50);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;}
+#refreshModal.open{display:flex;}
+.mbox{background:var(--white);border-radius:var(--r2);padding:32px 36px;width:420px;
+  box-shadow:0 20px 48px rgba(0,0,0,0.22);}
+.mbox h2{font-family:var(--fh);font-size:18px;font-weight:700;text-transform:uppercase;
+  color:var(--navy);letter-spacing:0.5px;margin-bottom:8px;}
+.mbox p{font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:22px;}
+.m-drop{border:2px dashed var(--g300);border-radius:var(--r);
+  padding:28px 20px;text-align:center;cursor:pointer;
+  transition:all 0.2s;margin-bottom:14px;background:var(--g50);}
+.m-drop:hover,.m-drop.drag{border-color:var(--tataL);background:#E8F2FF;}
+.m-drop span{display:block;font-size:12.5px;font-weight:600;color:var(--t2);}
+.m-btn{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:var(--tw);
+  border:none;border-radius:var(--r);cursor:pointer;font-family:var(--fh);
+  font-size:13px;font-weight:700;padding:11px 22px;text-transform:uppercase;
+  transition:background 0.16s;width:100%;justify-content:center;letter-spacing:0.5px;}
+.m-btn:hover{background:var(--tata);}
+.m-cancel{display:block;margin-top:12px;text-align:center;font-size:11.5px;color:var(--t3);cursor:pointer;}
+.m-cancel:hover{color:var(--navy);}
+#fileInput{display:none;}
+
+
+/* HERO CHART — dominant card per section */
+.cc.hero{border:1px solid rgba(0,90,158,0.20);box-shadow:0 4px 20px rgba(0,20,80,0.10);position:relative;}
+.cc.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--tata),var(--tataL));border-radius:var(--r2) var(--r2) 0 0;}
+
+
+/* ════ DIVERSITY INFOGRAPHIC CARDS ════ */
+.div-infographic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:22px;}
+.div-card{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  padding:16px 16px 14px;box-shadow:var(--shadow-xs);position:relative;overflow:hidden;}
+.div-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--dc,var(--navy));}
+.div-card.zero-f::before{background:var(--red);}
+.div-card-grade{font-family:var(--fh);font-size:15px;font-weight:800;text-transform:uppercase;
+  letter-spacing:1px;color:var(--t1);margin-bottom:12px;border-bottom:1px solid var(--g100);padding-bottom:8px;}
+.div-card-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.div-bar-row{display:flex;align-items:center;gap:8px;}
+.div-bar-lbl{font-size:10px;font-weight:500;color:var(--t2);width:58px;flex-shrink:0;
+  letter-spacing:0.2px;}
+.div-bar-track{flex:1;height:7px;background:var(--g200);border-radius:4px;overflow:hidden;}
+.div-bar-fill{height:100%;border-radius:4px;transition:width 0.55s cubic-bezier(.4,0,.2,1);}
+.div-bar-val{font-family:var(--fm);font-size:10px;color:var(--t1);width:28px;text-align:right;flex-shrink:0;font-weight:600;}
+.div-card-footer{padding-top:10px;border-top:1px solid var(--g100);
+  display:flex;align-items:center;justify-content:space-between;}
+.div-card-total{font-size:12px;color:var(--navy);font-weight:800;text-transform:uppercase;letter-spacing:0.5px;}
+.div-card-pct{display:flex;align-items:baseline;gap:4px;}
+.div-card-pct-num{font-family:var(--fh);font-size:22px;font-weight:800;line-height:1;}
+.div-card-pct-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:0.8px;}
+
+/* ════ DIVERSITY GRADE HEATMAP MATRIX ════ */
+.dmi-toolbar{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.dmi-filters,.dmi-sort{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.dmi-sort-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--t3);}
+.dmi-pill{background:var(--g100);border:1px solid var(--g200);border-radius:4px;
+  padding:5px 11px;font-family:var(--fh);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.7px;color:var(--t2);cursor:pointer;
+  transition:all 0.14s;white-space:nowrap;}
+.dmi-pill:hover{background:var(--g200);color:var(--t1);}
+.dmi-pill.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.dmi-matrix{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  overflow:hidden;box-shadow:var(--shadow-sm);}
+.dmi-header,.dmi-row,.dmi-footer{
+  display:grid;
+  grid-template-columns:148px 1fr 1fr 1fr 128px 186px;
+  border-bottom:1px solid var(--g100);}
+.dmi-header{background:linear-gradient(100deg,var(--navy2) 0%,var(--navy) 60%,#003580 100%);
+  border-bottom:2px solid rgba(0,0,0,0.15);}
+.dmi-hcell{padding:11px 14px;font-family:var(--fh);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.1px;color:rgba(255,255,255,0.50);
+  border-right:1px solid rgba(255,255,255,0.07);}
+.dmi-hcell:first-child{color:rgba(255,255,255,0.85);}
+.dmi-total-head{border-left:2px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.70)!important;}
+.dmi-row{cursor:pointer;transition:background 0.13s;position:relative;}
+.dmi-row:last-of-type{border-bottom:none;}
+.dmi-row:hover{background:var(--g50);}
+.dmi-row.expanded{background:#F6F4FD;}
+.dmi-grade-cell{padding:12px 14px;display:flex;flex-direction:column;
+  justify-content:center;gap:4px;border-right:1px solid var(--g100);}
+.dmi-grade-name{font-family:var(--fh);font-size:13px;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.5px;color:var(--t1);}
+.dmi-grade-badge{font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:0.7px;width:fit-content;}
+.dmi-cell{padding:10px 14px;display:flex;flex-direction:column;justify-content:center;
+  min-height:62px;border-right:1px solid var(--g100);transition:filter 0.13s;}
+.dmi-cell:hover{filter:brightness(0.93);}
+.dmi-cell.zero-f{box-shadow:inset 3px 0 0 rgba(200,16,46,0.55);}
+.dmi-cell-pct{font-family:var(--fh);font-size:21px;font-weight:800;line-height:1;}
+.dmi-cell-mf{font-family:var(--fm);font-size:9.5px;margin-top:3px;}
+.dmi-cell-empty{font-size:18px;color:var(--g300);}
+.dmi-total-cell{border-left:2px solid rgba(0,0,0,0.06);}
+.dmi-bar-cell{padding:8px 14px;display:flex;align-items:center;gap:8px;}
+.dmi-bar-track{flex:1;height:9px;background:var(--g100);border-radius:5px;overflow:hidden;}
+.dmi-bar-fill{height:100%;border-radius:5px;transition:width 0.55s cubic-bezier(.4,0,.2,1);}
+.dmi-bar-lbl{font-family:var(--fh);font-size:14px;font-weight:800;width:42px;text-align:right;flex-shrink:0;}
+/* Expanded detail strip */
+.dmi-detail-row{background:#F6F4FD;border-bottom:1px solid var(--g200);
+  animation:fadeIn 0.18s ease;}
+.dmi-detail-inner{padding:16px 20px 18px;}
+.dmi-detail-title{font-family:var(--fh);font-size:10.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:14px;}
+.dmi-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:10px;margin-bottom:12px;}
+.dmi-detail-card{background:var(--white);border:1px solid var(--g200);border-radius:var(--r);
+  padding:14px 14px 12px;box-shadow:var(--shadow-xs);}
+.dmi-detail-div{font-family:var(--fh);font-size:12px;font-weight:800;
+  text-transform:uppercase;margin-bottom:2px;}
+.dmi-detail-total{font-size:10px;color:var(--t3);margin-bottom:10px;font-weight:600;}
+.dmi-detail-bar-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.dmi-detail-gender-lbl{font-size:9px;font-weight:800;width:8px;flex-shrink:0;}
+.dmi-detail-track{flex:1;height:8px;background:var(--g200);border-radius:4px;overflow:hidden;}
+.dmi-detail-fill{height:100%;border-radius:4px;transition:width 0.5s;}
+.dmi-detail-cnt{font-family:var(--fm);font-size:10px;font-weight:600;width:24px;text-align:right;flex-shrink:0;}
+.dmi-detail-pct{font-family:var(--fh);font-size:20px;font-weight:800;margin-top:8px;
+  padding-top:8px;border-top:1px solid var(--g100);display:flex;align-items:baseline;gap:6px;}
+.dmi-detail-badge{font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:0.6px;}
+.dmi-detail-close{font-size:10px;color:var(--t3);text-align:center;cursor:pointer;
+  padding:6px;border-radius:4px;transition:background 0.13s;user-select:none;}
+.dmi-detail-close:hover{background:var(--g200);color:var(--t1);}
+/* Footer totals row */
+.dmi-footer{background:var(--g100);border-top:2px solid var(--g300);}
+.dmi-footer-label{padding:11px 14px;font-family:var(--fh);font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.8px;color:var(--t2);border-right:1px solid var(--g200);}
+.dmi-footer-cell{border-right:1px solid var(--g200);min-height:52px;}
+/* Legend */
+.dmi-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 0 2px;}
+.dmi-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);}
+.dmi-legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid var(--g200);}
+/* Floating tooltip */
+.dmi-tooltip{position:absolute;z-index:9999;background:var(--white);
+  border:1px solid var(--g200);border-radius:8px;padding:12px 14px;
+  box-shadow:var(--shadow-md);min-width:174px;pointer-events:none;display:none;}
+.dmi-tip-hdr{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--fh);font-size:12px;font-weight:800;color:var(--t1);
+  margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--g100);}
+.dmi-tip-hdr span{font-size:10px;font-weight:600;text-transform:uppercase;
+  color:var(--t3);letter-spacing:0.8px;}
+.dmi-tip-row{display:flex;justify-content:space-between;font-size:11.5px;
+  color:var(--t2);margin-bottom:3px;}
+.dmi-tip-row strong{color:var(--t1);}
+.dmi-tip-div{display:flex;justify-content:space-between;font-size:12px;color:var(--t2);
+  margin-top:6px;padding-top:6px;border-top:1px solid var(--g100);font-weight:700;}
+.dmi-tip-badge{font-size:8.5px;font-weight:700;padding:2px 8px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:0.7px;}
+
+/* ════ GEOGRAPHY INFOGRAPHIC PANELS ════ */
+.geo-4grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.geo-panel{background:var(--white);border:1px solid var(--g200);border-radius:var(--r2);
+  box-shadow:var(--shadow-xs);overflow:hidden;display:flex;flex-direction:column;}
+.geo-panel-hdr{padding:16px 18px 12px;border-bottom:1px solid var(--g100);}
+.geo-panel-hdr-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.geo-panel-badge{font-family:var(--fh);font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.9px;padding:3px 10px;border-radius:4px;color:#fff;flex-shrink:0;}
+.geo-panel-type{font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.geo-panel-count{font-family:var(--fh);font-size:36px;font-weight:700;color:var(--t1);line-height:1;}
+.geo-panel-sub{font-size:11.5px;color:var(--t3);margin-top:3px;}
+.geo-panel-body{padding:14px 18px 18px;flex:1;overflow-y:auto;max-height:400px;}
+.geo-rank-list{list-style:none;display:flex;flex-direction:column;gap:7px;}
+.geo-rank-item{display:flex;align-items:center;gap:8px;}
+.geo-rank-num{font-family:var(--fh);font-size:10.5px;font-weight:700;color:var(--t3);width:16px;text-align:right;flex-shrink:0;}
+.geo-rank-name{flex:1;font-size:12px;font-weight:500;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.geo-rank-bar-wrap{width:80px;flex-shrink:0;}
+.geo-rank-bar{height:5px;background:var(--g200);border-radius:3px;overflow:hidden;}
+.geo-rank-fill{height:100%;border-radius:3px;}
+.geo-rank-val{font-family:var(--fm);font-size:10.5px;color:var(--t1);width:20px;text-align:right;flex-shrink:0;}
+.geo-rank-pct{font-size:9.5px;color:var(--t3);width:30px;text-align:right;flex-shrink:0;}
+/* ════ MAP WRAPPER ════ */
+.map-stage{position:relative;border-radius:var(--r2);overflow:hidden;
+  border:1px solid var(--g200);box-shadow:var(--shadow-xs);margin-bottom:16px;
+  display:flex;height:520px;min-height:520px;}
+#locationMap{flex:1;min-width:0;height:520px;border-radius:0;border:none;box-shadow:none;margin-bottom:0;}
+.map-legends{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.map-legend-pill{display:inline-flex;align-items:center;gap:6px;background:var(--white);
+  border:1px solid var(--g200);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--t2);}
+.map-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ════ LOCATION DETAIL PANEL ════ */
+#locDetailPanel{
+  width:0;overflow:hidden;
+  background:var(--white);
+  border-left:1px solid var(--g200);
+  display:flex;flex-direction:column;
+  transition:width 0.38s cubic-bezier(.4,0,.2,1);
+  position:relative;flex-shrink:0;
+}
+#locDetailPanel.open{width:300px;}
+.loc-panel-inner{
+  width:300px;padding:20px 20px 16px;
+  display:flex;flex-direction:column;gap:0;
+  height:100%;overflow-y:auto;
+}
+/* Panel header */
+.loc-panel-back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--fh);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--t3);cursor:pointer;
+  padding:6px 10px 6px 6px;border-radius:5px;
+  background:transparent;border:none;
+  transition:color 0.15s,background 0.15s;
+  margin-bottom:14px;align-self:flex-start;
+}
+.loc-panel-back:hover{color:var(--navy);background:var(--g100);}
+.loc-panel-back svg{width:14px;height:14px;flex-shrink:0;}
+.loc-panel-city{
+  font-family:var(--fh);font-size:24px;font-weight:800;
+  color:var(--navy);line-height:1.1;margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:0.3px;
+}
+.loc-panel-div-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--fh);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;
+  padding:3px 10px;border-radius:20px;margin-bottom:18px;
+}
+/* Stat tiles */
+.loc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.loc-stat{
+  background:var(--g50);border:1px solid var(--g200);border-radius:8px;
+  padding:12px 12px 10px;border-top:3px solid var(--lsc,var(--navy));
+}
+.loc-stat-v{font-family:var(--fh);font-size:28px;font-weight:800;color:var(--t1);line-height:1;}
+.loc-stat-v sup{font-size:13px;}
+.loc-stat-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-top:5px;}
+/* Division bar */
+.loc-div-section{margin-bottom:16px;}
+.loc-div-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;}
+.loc-div-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.loc-div-name{font-size:12px;font-weight:600;color:var(--t2);width:68px;flex-shrink:0;}
+.loc-div-bar-wrap{flex:1;height:8px;background:var(--g200);border-radius:4px;overflow:hidden;}
+.loc-div-bar-fill{height:100%;border-radius:4px;transition:width 0.5s cubic-bezier(.4,0,.2,1);}
+.loc-div-count{font-family:var(--fm);font-size:11px;color:var(--t1);font-weight:600;width:22px;text-align:right;flex-shrink:0;}
+/* TAT section */
+.loc-tat-section{padding:12px;background:var(--g50);border-radius:8px;border:1px solid var(--g200);}
+.loc-tat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:6px;}
+.loc-tat-value{font-family:var(--fh);font-size:32px;font-weight:800;color:var(--amber);line-height:1;}
+.loc-tat-sub{font-size:11px;color:var(--t3);margin-top:3px;}
+
+/* ════ MAP BACK BUTTON (floating on map) ════ */
+#mapBackBtn{
+  display:flex;align-items:center;gap:6px;
+  position:absolute;top:12px;left:12px;z-index:1000;
+  background:var(--white);border:1px solid var(--g200);border-radius:7px;
+  padding:8px 14px 8px 10px;
+  font-family:var(--fh);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--navy);
+  cursor:pointer;box-shadow:var(--shadow-sm);
+  transition:box-shadow 0.15s,background 0.15s;
+}
+#mapBackBtn:hover{background:var(--g50);box-shadow:var(--shadow-md);}
+#mapBackBtn svg{width:14px;height:14px;flex-shrink:0;}
+#mapBackBtn.hidden{display:none!important;}
+
+/* ════ MARKER PULSE (selected state) ════ */
+@keyframes markerPulse{
+  0%{box-shadow:0 0 0 0 rgba(0,90,158,0.45);}
+  70%{box-shadow:0 0 0 12px rgba(0,90,158,0);}
+  100%{box-shadow:0 0 0 0 rgba(0,90,158,0);}
+}
+.leaflet-interactive.marker-selected{
+  animation:markerPulse 1.6s ease-out infinite;
+}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--g100);}
+::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--t3);}
+
+/* RESPONSIVE */
+@media(max-width:1280px){
+  .exec-hero-row{grid-template-columns:1fr 1fr;}
+  .exec-hero-row .exec-stat-hero{grid-column:1/-1;}
+  .exec-narrative{grid-template-columns:1fr 1fr;}
+  .exec-narrative .hlcard-lead{grid-column:1/-1;}
+  .g31{grid-template-columns:1fr;}
+  .g211{grid-template-columns:1fr 1fr;}
+  .g211>div:first-child{grid-column:1/-1;}
+}
+@media(max-width:860px){
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+  .exec-stat-row{grid-template-columns:repeat(2,1fr);}
+  .hdr{flex-wrap:wrap;height:auto;padding:10px 16px;gap:8px;}
+  .nav{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-logo-pill"><img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACyAkcDASIAAhEBAxEB/8QAHAABAAIDAQEBAAAAAAAAAAAAAAcIAQUGBAMC/8QAVhAAAQMDAQQFBgUPCgUCBwAAAQACAwQFEQYHEiExCBNBUYEUImFxkaEVFjKxsiM3QlJWcnN0dZKUorPR0hckMzZTVWJjgsElNDU4Q5PCGCYnRFRk4f/EABsBAQACAwEBAAAAAAAAAAAAAAAEBQIDBgEH/8QAOhEAAgIBAgMFBgUCBgIDAAAAAAECAwQFERIhcRMxM0FRBiIyNGGBFJGhscHR8BUjNUJy4SRiJUTx/9oADAMBAAIRAxEAPwC5aIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIUAWCmVHG1jabS6Ua6120R1d5e3O6TllODyc/vPc32rdj49mRYq61u2arroUwc5vZHa6hv1n0/RGsvFfDRw9heeLj3NHMn1KJNTbdYmvfDpy0mXHAVFYd0H0hg4+0hQ3e7rcr1cH192rZaupdzfIeQ7gOQHoC8ZK7HD9m6a1ve+J+nkc5k6xZN7V8l+p2F42m64ubyX32WlYTkMpWiID0ZHH2lc3WXa7VjS2rutfUNJyWy1D3D2Erxbzfth7U3h3hXlWLj1fBFIq53W2c5SbP1l3PeOfWvdR3u90W75JebjAGfJEdS8AeGcLX5HNN5veFunCuS2kkzCMpLuO3su1TXFscAbv5bGObKuMPz48D71IulduVtqXtg1FbpKBx4GeAmSPxHyh71Ae837Ye1ZVbkaNh3r4dn6omU6jk1d0t+pdK1XKgutEytttZDV0zx5skTw4er0FesKnGltSXnTFeK2zVr4HE/VIzxjlHc5vI/OrKbMtoFt1nRljWikucLcz0rnZ4fbMPa33jtXIalo1uF7696Pr/U6DC1KvJfC+UjtETKKnLMIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCFEPJAa+/m5i01AszYHV7mbsBmdhjXH7J3oHPHaocpNhtyrKiSrv2pmOnmcXymCEvcXk8TvOIz7FstuW0C/6av1JabHNDT71N10sj4Q9xy4gAZ4DkVEVw1tq+vdvVWpLkefCOYxj2Nwum0rTs7su0pkoqXn5/sUWfl43acNkW2vyJrpdjGiLfGJLlVVtRwwTNUiNhPf5oGPavezTGye0BhmgsTHM5OqKkOPjvOVaJpppxieeaUZzh8hd86+Ya0cmgeCs3omTZ4mQ3/fUhLUaYfBUi08Ny2WUrw+Gp0rE7kHMEOfaF1NLDaqykZNTQ0U9PK3LXsY1zXNPcRzCpfgdysp0cY52bOGGXeDHVkzocnhu8Bw9GQVUatpCwqVYrG+e3Mn4Gf+Is4HBLoRzp2yW09ISa0+SxGhgrZnsgc3LBhhcBjuBPL0BT/cvgW30b6q4NoKanZ8uSZrWtHrJUI6b/7ma38an/ZredKJtSbJZXNLvJhVPEgB4F255uR4OTLqllZNFTltvGIx5qii2xLfZs6uWv2VVO8+WfSjy7mXCHJ/3XifpDZRdoyYILN5xzv01WGH3OVZ+Hcvy5jHc2tPgrVez0oeHc0Qf8WUvirTLFV2xPSFdE6W2V9fTb3yCyZsrG+0ZPtWmptjmoLBd4LtpnUlM6op370YqYnMyO0OLcgg8sYUK09VVUzmupquohLTlvVyubj1YK39t17rO3uBptR15Gclsz+tB/OyspabqMYuMblJejX/AOnizMST3dez+jLZ0jpn0sTqmMRTFgMjGu3g12OIB7eK+6jLYVrW76sprlDenRSVFG6MskjjDN5rs8CBwzlpUmjkuNyceePa6596OkoujdWpx7mERFoNwREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBDyRDyQFe+k7QyRaqtlx3T1VRSGLPZvMcTj2OUSq1e1/SjtWaRlpqZgNfTHr6TPa4Di3P+IcPXhVVkY+OR0crHRyMcWua4YLSOBBC772eyo24qr84/sclq1Drvc/JmERFflWYccNJPYFbjZdb/gvZ7ZKQhu8KVsjt3kXP84n3qqNppHXC7UdAwEuqJ2RDAz8pwCulDG2KFkTAA1jQ1oAwABwXI+1NvKuvqy+0KvnKf2IC03/3M1v41P8As133SBt/l2zSsmAbv0UsdQ0kZPB26ceDiuB03/3M1v41P+zU3aooRc9N3K3nP84pZIxgZOS04Vbm29lkY9npGJMxYdpTbH1bKZosAOb5rxuubwcO4jmsrv091ucqwiL0W2iq7lcIKCggdPVVDxHFG3mSf9vSvJSUU5S7kEnJ7Im3ou0MjLfe7k4ERyyxwsyOB3ASfpKaVoNBafh0vpWis0RD3RM3pnj7OQ8XH2+7C36+YahkrJyZ2rubO4w6expjBhERQySEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAQoiAxhRTte2WMv0kl80+GQ3TGZ4DwZU+nPY/3Ht71K6x2LfjZVmLYrK3szTfRC+HBNcik9bS1NDVyUdbTy01REcPilaWuafSCvkrfau0fp/VNP1V4oGSyNGI52ebLH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" alt="Tata Advanced Systems Limited"></div>
+  </div>
+  <div class="hdr-sep"></div>
+  <div class="hdr-title">
+    <h1>Tata Advanced Systems Limited</h1>
+    <p>Talent Acquisition Analytics &nbsp;·&nbsp; FY 2025–26 &nbsp;·&nbsp; HR</p>
+  </div>
+  <div class="hdr-r">
+    <nav class="nav">
+      <button class="nbtn on" onclick="showTab('overview',this)">Executive Overview</button>
+      <button class="nbtn" onclick="showTab('tat',this)">Hiring Efficiency</button>
+      <button class="nbtn" onclick="showTab('source',this)">Source Effectiveness</button>
+      <button class="nbtn" onclick="showTab('diversity',this)">Diversity</button>
+      <button class="nbtn" onclick="showTab('projects',this)">Geography</button>
+    </nav>
+    <div class="hdr-badge">
+      <div class="dot pulse" id="statusDot"></div>
+      <span class="ts-lbl" id="tsLabel">—</span>
+    </div>
+    <button class="btn-refresh" onclick="openRefreshModal()" title="Load updated Excel">↻</button>
+  </div>
+</header>
+
+<!-- DASHBOARD -->
+<main class="main">
+
+  <!-- OVERVIEW & SUMMARY (merged) -->
+  <div id="tab-overview" class="section on">
+    <div class="ph" style="align-items:flex-start;">
+      <div class="ph-l" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <div class="pt">Executive Overview</div>
+        <div class="ps" id="overviewSub">FY 2025–26 · Talent Acquisition · Confidential</div>
+      </div>
+      <span class="ph-badge">Confidential</span>
+    </div>
+    <div class="exec-hero-row" id="execStats"></div>
+    <div class="exec-narrative" id="execHighlights"></div>
+    <div id="execAlerts" style="display:none"></div>
+    <div class="sdiv" style="margin-top:8px">
+      <div class="pt" style="font-size:18px">Hiring Breakdown</div>
+    </div>
+    <div class="krow" id="kpiRow"></div>
+    <div class="g31">
+      <div class="cc hero">
+        <div class="cct">Monthly Hiring Trend</div>
+        <div class="ccs" id="subMonthly">—</div>
+        <div class="leg" id="monthlyLeg"></div>
+        <canvas id="monthlyChart" height="220"></canvas>
+      </div>
+      <div class="vcol">
+        <div class="cc" style="flex:1">
+          <div class="cct">Hire Type</div>
+          <div class="ccs" id="subHireType">—</div>
+          <div class="dw-wrap">
+            <div class="dw-canvas-wrap">
+              <canvas id="hireTypeChart" width="160" height="160"></canvas>
+              <div class="dw-center"><div class="dw-center-v" id="htCenter">—</div><div class="dw-center-l">Total</div></div>
+            </div>
+            <ul class="dl" id="hireTypeLeg"></ul>
+          </div>
+        </div>
+        <div class="cc" style="flex:1">
+          <div class="cct">Roll Type</div>
+          <div class="ccs" id="subRollType">—</div>
+          <div class="dw-wrap">
+            <div class="dw-canvas-wrap">
+              <canvas id="rollTypeChart" width="160" height="160"></canvas>
+              <div class="dw-center"><div class="dw-center-v" id="rtCenter">—</div><div class="dw-center-l">Total</div></div>
+            </div>
+            <ul class="dl" id="rollTypeLeg"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="g3">
+      <div class="cc">
+        <div class="cct">Division Split</div>
+        <div class="ccs" id="subDivision">—</div>
+        <div class="dw-wrap">
+          <div class="dw-canvas-wrap">
+            <canvas id="divisionChart" width="160" height="160"></canvas>
+            <div class="dw-center"><div class="dw-center-v" id="divCenter">—</div><div class="dw-center-l">Total</div></div>
+          </div>
+          <ul class="dl" id="divisionLeg"></ul>
+        </div>
+      </div>
+      <div class="cc">
+        <div class="cct">Source of Hire</div>
+        <div class="ccs" id="subSourceList">—</div>
+        <ul class="bl" id="sourceList"></ul>
+      </div>
+      <div class="cc">
+        <div class="cct">Grade Distribution</div>
+        <div class="ccs" id="subGradeList">—</div>
+        <ul class="bl" id="gradeList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIRING EFFICIENCY -->
+  <div id="tab-tat" class="section">
+    <div class="ph">
+      <div class="ph-l">
+        <div class="pt">Hiring Efficiency</div>
+        <div class="ps" id="subTATPage">—</div>
+      </div>
+    </div>
+    <div class="so-what" id="tatSoWhat" style="display:none">
+      <span class="so-what-q">Are we fast enough?</span>
+      <span class="so-what-a" id="tatSoWhatA"></span>
+      <span class="so-what-verdict" id="tatVerdict"></span>
+    </div>
+    <div class="srow" id="tatStats"></div>
+    <div class="g31">
+      <div class="cc hero">
+        <div class="cct">Offer TAT Distribution</div>
+        <div class="ccs" id="subTATBand">—</div>
+        <canvas id="tatBandChart" height="250"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cct">TAT Band Snapshot</div>
+        <div class="ccs" id="subTATGrid">—</div>
+        <div class="tbands" id="tatBandsGrid"></div>
+        <div class="al al-g" id="tatAlert"></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="cc">
+        <div class="cct">Monthly Average Offer TAT</div>
+        <div class="ccs" id="subTATMonthly">—</div>
+        <canvas id="tatMonthlyChart" height="200"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cct">Avg Offer TAT by Division</div>
+        <div class="ccs" id="subTATDiv">—</div>
+        <canvas id="tatDivChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOURCE EFFECTIVENESS -->
+  <div id="tab-source" class="section">
+    <div class="ph">
+      <div class="ph-l">
+        <div class="pt">Source Effectiveness</div>
+        <div class="ps" id="subSrcPage">—</div>
+      </div>
+    </div>
+    <div class="so-what" id="srcSoWhat" style="display:none">
+      <span class="so-what-q">Which channel is helping or hurting speed?</span>
+      <span class="so-what-a" id="srcSoWhatA"></span>
+      <span class="so-what-verdict" id="srcVerdict"></span>
+    </div>
+    <div class="g211">
+      <div class="cc hero">
+        <div class="cct">Volume &amp; Speed by Channel</div>
+        <div class="ccs" id="subSrcVolume">—</div>
+        <canvas id="sourceVolumeChart" height="280"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cct">Cyber — Source Mix</div>
+        <div class="ccs" id="subSrcCyber">—</div>
+        <div class="dw-wrap">
+          <div class="dw-canvas-wrap">
+            <canvas id="srcCyberChart" width="150" height="150"></canvas>
+            <div class="dw-center"><div class="dw-center-v" id="scCenter">—</div><div class="dw-center-l">Cyber</div></div>
+          </div>
+          <ul class="dl" id="srcCyberLeg"></ul>
+        </div>
+      </div>
+      <div class="cc">
+        <div class="cct">Physical — Source Mix</div>
+        <div class="ccs" id="subSrcPhysical">—</div>
+        <div class="dw-wrap">
+          <div class="dw-canvas-wrap">
+            <canvas id="srcPhysChart" width="150" height="150"></canvas>
+            <div class="dw-center"><div class="dw-center-v" id="spCenter">—</div><div class="dw-center-l">Physical</div></div>
+          </div>
+          <ul class="dl" id="srcPhysLeg"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="cct">Source × Division × Hire Type Matrix</div>
+      <div class="ccs" id="subSrcTable">—</div>
+      <div style="overflow-x:auto;margin-top:12px"><table class="htm" id="srcDivTable"></table></div>
+    </div>
+  </div>
+
+  <!-- DIVERSITY -->
+  <div id="tab-diversity" class="section">
+    <div class="ph">
+      <div class="ph-l">
+        <div class="pt">Diversity &amp; Inclusion</div>
+        <div class="ps" id="subDivPage">—</div>
+      </div>
+    </div>
+    <div class="so-what" id="divSoWhat" style="display:none">
+      <span class="so-what-q">Are we balanced?</span>
+      <span class="so-what-a" id="divSoWhatA"></span>
+      <span class="so-what-verdict" id="divVerdict"></span>
+    </div>
+    <div class="srow" id="genderStats"></div>
+    <div class="g2">
+      <div class="cc">
+        <div class="cct">Gender × Division (Onroll)</div>
+        <div class="ccs" id="subGenDiv">—</div>
+        <canvas id="genderDivChart" height="200"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cct">Gender × Hire Type</div>
+        <div class="ccs" id="subGenHire">—</div>
+        <canvas id="genderHireChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="sdiv" style="margin-top:6px">
+      <div class="pt" style="font-size:17px">Grade &amp; Division — Representation Breakdown</div>
+      <div class="ps">Onroll only · click any grade to switch focus · hover arcs for division-level detail</div>
+    </div>
+    <div id="divAdvViz"></div>
+  </div>
+
+  <!-- GEOGRAPHY -->
+  <div id="tab-projects" class="section">
+    <div class="ph">
+      <div class="ph-l">
+        <div class="pt">Geography &amp; Projects</div>
+        <div class="ps" id="subProjPage">—</div>
+      </div>
+    </div>
+    <div class="so-what" id="geoSoWhat" style="display:none">
+      <span class="so-what-q">Where is the bottleneck?</span>
+      <span class="so-what-a" id="geoSoWhatA"></span>
+      <span class="so-what-verdict" id="geoVerdict"></span>
+    </div>
+
+    <!-- Interactive Map -->
+    <div class="cc" style="padding:16px 18px 14px;margin-bottom:14px;">
+      <div class="cct">India Hiring Map</div>
+      <div class="ccs">Click any marker to zoom in and explore location details · Click again or use Back to return</div>
+      <div class="map-legends">
+        <div class="map-legend-pill"><div class="map-legend-dot" style="background:#005A9E"></div>Cyber</div>
+        <div class="map-legend-pill"><div class="map-legend-dot" style="background:#C84800"></div>Physical</div>
+        <div class="map-legend-pill"><div class="map-legend-dot" style="background:#6040A0"></div>Both divisions</div>
+      </div>
+      <!-- Map stage: map + collapsible side panel -->
+      <div class="map-stage">
+        <div id="locationMap"></div>
+        <!-- Floating back button on map -->
+        <button id="mapBackBtn" class="hidden" onclick="mapResetView()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 3L5 8l5 5"/>
+          </svg>
+          Full Map
+        </button>
+        <!-- Detail side panel -->
+        <div id="locDetailPanel">
+          <div class="loc-panel-inner" id="locPanelInner">
+            <!-- filled dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Infographic Panels (Change 2) -->
+    <div class="sdiv" style="margin-top:4px">
+      <div class="pt" style="font-size:17px">Projects &amp; Locations by Division</div>
+      <div class="ps">All active entries shown — no truncation</div>
+    </div>
+    <div class="geo-4grid">
+      <!-- Panel 1: Cyber Projects -->
+      <div class="geo-panel">
+        <div class="geo-panel-hdr">
+          <div class="geo-panel-hdr-row">
+            <span class="geo-panel-badge" style="background:#005A9E">Cyber</span>
+            <span class="geo-panel-type">Projects</span>
+          </div>
+          <div class="geo-panel-count" id="cyProjTotal">—</div>
+          <div class="geo-panel-sub" id="cyProjSub">—</div>
+        </div>
+        <div class="geo-panel-body">
+          <ul class="geo-rank-list" id="cyberProjectsList"></ul>
+        </div>
+      </div>
+      <!-- Panel 2: Physical Projects -->
+      <div class="geo-panel">
+        <div class="geo-panel-hdr">
+          <div class="geo-panel-hdr-row">
+            <span class="geo-panel-badge" style="background:#C84800">Physical</span>
+            <span class="geo-panel-type">Projects</span>
+          </div>
+          <div class="geo-panel-count" id="phProjTotal">—</div>
+          <div class="geo-panel-sub" id="phProjSub">—</div>
+        </div>
+        <div class="geo-panel-body">
+          <ul class="geo-rank-list" id="physProjectsList"></ul>
+        </div>
+      </div>
+      <!-- Panel 3: Cyber Locations -->
+      <div class="geo-panel">
+        <div class="geo-panel-hdr">
+          <div class="geo-panel-hdr-row">
+            <span class="geo-panel-badge" style="background:#005A9E">Cyber</span>
+            <span class="geo-panel-type">Locations</span>
+          </div>
+          <div class="geo-panel-count" id="cyLocTotal">—</div>
+          <div class="geo-panel-sub" id="cyLocSub">—</div>
+        </div>
+        <div class="geo-panel-body">
+          <ul class="geo-rank-list" id="cyberLocationsList"></ul>
+        </div>
+      </div>
+      <!-- Panel 4: Physical Locations -->
+      <div class="geo-panel">
+        <div class="geo-panel-hdr">
+          <div class="geo-panel-hdr-row">
+            <span class="geo-panel-badge" style="background:#C84800">Physical</span>
+            <span class="geo-panel-type">Locations</span>
+          </div>
+          <div class="geo-panel-count" id="phLocTotal">—</div>
+          <div class="geo-panel-sub" id="phLocSub">—</div>
+        </div>
+        <div class="geo-panel-body">
+          <ul class="geo-rank-list" id="physLocationsList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="wm">TASL &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; FY 2025–26 &nbsp;·&nbsp; HR / Talent Acquisition</div>
+<div class="toast" id="toast"></div>
+
+<!--
+<!-- UPLOAD OVERLAY — shown only when no data loaded -->
+<div id="uploadOverlay">
+  <div class="ub">
+    <img class="ub-logo" src="data:image/png;base64,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" alt="Tata Advanced Systems Limited">
+    <h2>Connect Your Excel</h2>
+    <p>Upload <strong>TA_Dashboard_version_2.xlsx</strong> (or any updated version) to populate the dashboard. Only the <strong>Master_Data</strong> sheet is read.</p>
+    <div class="ub-drop" id="ubDrop">
+      <span>Drag &amp; drop Excel file here</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.36);margin-top:5px">or click to browse</span>
+    </div>
+    <button class="ub-btn" onclick="document.getElementById('fileInput').click()">📂 Browse &amp; Connect Excel</button>
+    <p class="ub-note">Data stays local — nothing is uploaded to any server.</p>
+  </div>
+</div>
+-->
+
+<!-- REFRESH MODAL -->
+<div id="refreshModal">
+  <div class="mbox">
+    <h2>Update Data Source</h2>
+    <p>Upload an updated version of the Excel file. Only the <strong>Master_Data</strong> sheet will be read. All metrics will be recalculated automatically.</p>
+    <div class="m-drop" id="modalDrop">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tataL);margin-bottom:9px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+      <span>Drag &amp; drop Excel file here</span>
+      <span style="font-size:11px;color:var(--t3);margin-top:5px">or click to browse</span>
+    </div>
+    <button class="m-btn" onclick="document.getElementById('fileInput').click()">Browse &amp; Connect Excel</button>
+    <span class="m-cancel" onclick="closeRefreshModal()">Cancel — keep current data</span>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".xlsx" onchange="handleFileInput(event)">
+
+<script>
+'use strict';
+
+/* ═══ PALETTE ═══════════════════════════════════════════════ */
+const DIV_COLOR = { Cyber:'#005A9E', Physical:'#C84800', Common:'#6040A0' };
+const SRC_COLOR = {
+  'Job Portal':'#005A9E','Consultant':'#6040A0','Referral':'#007A4D',
+  'Internal':'#B85C00','Campus':'#C8102E','BYB':'#008099','Other':'#7A8FAA'
+};
+const SRC_ORDER = ['Job Portal','Consultant','Referral','Internal','Campus','BYB','Other'];
+const MO_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const GRADE_ORDER = ['GET','Jr. Executive','Executive','Sr. Executive','Officer','AM','DM','Manager','Sr. Manager','DGM','GM'];
+
+/* ═══ CHART REGISTRY ════════════════════════════════════════ */
+const CHS = {};
+function dc(id){ if(CHS[id]){ CHS[id].destroy(); delete CHS[id]; } }
+function ctx(id){ return document.getElementById(id).getContext('2d'); }
+
+const AX_X = { grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#7A8FAA',font:{size:10,family:'Barlow'}} };
+const AX_Y = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#7A8FAA',font:{size:10,family:'Barlow'}}, beginAtZero:true };
+const LEG = { display:true, position:'top',
+  labels:{color:'#334E6B',font:{size:11,family:'Barlow',weight:'500'},usePointStyle:true,boxWidth:8,padding:14}};
+const LEG_DUAL = { display:true, position:'top',
+  labels:{color:'#334E6B',font:{size:11,family:'Barlow',weight:'500'},padding:14,
+    generateLabels: chart => chart.data.datasets.map((ds,i)=>({
+      text:ds.label,
+      fillStyle: ds.type==='line'?'transparent':(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:ds.backgroundColor),
+      strokeStyle: ds.type==='line'?ds.borderColor:'transparent',
+      lineWidth: ds.type==='line'?2:0,
+      pointStyle: ds.type==='line'?'line':'rect',
+      datasetIndex:i, hidden:false,
+    }))
+  }
+};
+
+/* ═══ NORMALISE SOURCE ══════════════════════════════════════ */
+function normSrc(s){
+  if(!s||!s.trim()) return 'Other';
+  const t = s.trim();
+  const MAP = {
+    'Job Portal':'Job Portal','Naukri':'Job Portal','LinkedIn':'Job Portal',
+    'Consultant':'Consultant','Consultants':'Consultant','Agency':'Consultant',
+    'Referral':'Referral','Referal':'Referral','Employee Referral':'Referral',
+    'Internal':'Internal','Internal movement':'Internal','Internal Movement':'Internal',
+    'Onroll Coversion':'Internal','Onroll Conversion':'Internal',
+    'Replaced candidate by Growth':'Internal','Transfer':'Internal','Promotion':'Internal',
+    'BYB':'BYB',
+    'Campus':'Campus','College':'Campus',
+  };
+  return MAP[t] || (t.toLowerCase().includes('campus')?'Campus':
+         t.toLowerCase().includes('portal')||t.toLowerCase().includes('naukri')||t.toLowerCase().includes('linkedin')?'Job Portal':
+         t.toLowerCase().includes('consult')?'Consultant':
+         t.toLowerCase().includes('refer')?'Referral':
+         t.toLowerCase().includes('internal')?'Internal':t);
+}
+
+/* ═══ DATE PARSER — handles Excel serial dates & strings ════ */
+function parseDate(v){
+  if(!v) return null;
+  if(v instanceof Date) return isNaN(v.getTime())?null:v;
+  const n = Number(v);
+  if(!isNaN(n) && n > 20000 && n < 60000){
+    // Excel serial date: days since 1900-01-00
+    const d = new Date((n - 25569)*86400*1000);
+    return isNaN(d.getTime())?null:d;
+  }
+  const s = String(v).trim();
+  const m1 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m1){ const d=new Date(+m1[1],+m1[2]-1,+m1[3]); return isNaN(d.getTime())?null:d; }
+  const m2 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m2){ const d=new Date(+m2[3],+m2[2]-1,+m2[1]); return isNaN(d.getTime())?null:d; }
+  const d = new Date(s); return isNaN(d.getTime())?null:d;
+}
+
+/* ═══ COMPUTE ═══════════════════════════════════════════════ */
+async function loadLiveDashboard(){
+
+  try{
+
+    console.log("Loading live dashboard data...");
+
+ const response = await fetch('https://opensheet.elk.sh/1W6nhwi5Zj-XOaEo6GYYeNIRpanlhIvaprK6XjsRd49c/Master_Data');
+    if(!response.ok){
+
+      throw new Error("API response failed");
+
+    }
+
+
+const text = await response.text();
+
+
+    if(!text){
+
+      throw new Error("Empty JSON response");
+
+    }
+
+
+const data = JSON.parse(text);
+
+
+    console.log("Sheets:", Object.keys(data));
+
+    const rows = data;
+
+    console.log("Rows extracted:", rows.length);
+
+    console.log("Starting compute()...");
+
+    const dashboardData = compute(rows);
+
+    console.log("compute() completed");
+
+    console.log("Starting renderAll()...");
+
+    renderAll(dashboardData);
+
+    console.log("renderAll() completed");
+
+    console.log("Dashboard rendered successfully");
+
+  }catch(error){
+
+    console.error("Error loading dashboard:", error);
+
+  }
+}
+function compute(rawRows){
+  const toNum = v => { const n=parseFloat(v); return isNaN(n)?null:n; };
+  const rows = rawRows.filter(r=>r&&typeof r==='object').map(r=>({
+    ...r,
+_src:  normSrc(r['Source']),
+_doj:  parseDate(r['DOJ']),
+_tat:  toNum(r['Time to Offer']),
+_tatT: toNum(r['Total TAT (Days)']),
+_tatJ: toNum(r['Offer→Join (Days)']),
+_roll: (r['Roll Type'] || '').trim(),
+_hire: (r['Hire Type'] || '').trim(),
+_gen:  (r['Gender'] || '').trim(),
+_div:  (r['Division'] || '').trim(),
+_loc:  (r['Work Location'] || '').trim(),
+_proj: (r['Project'] || '').trim(),
+  }));
+
+  const cnt = f => rows.filter(f).length;
+  const avg = arr => arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : 0;
+  const med = arr => {
+    if(!arr.length) return 0;
+    const s=[...arr].sort((a,b)=>a-b);
+    const m=Math.floor(s.length/2);
+    return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+  };
+  const f1 = v => Math.round(v*10)/10;
+  const pct = (n,d) => d ? Math.round(n/d*1000)/10 : 0;
+
+  const total = rows.length;
+  const onroll  = cnt(r=>r._roll==='Onroll');
+  const offroll = cnt(r=>r._roll==='Offroll');
+  const cyber   = cnt(r=>r._div==='Cyber');
+  const physical= cnt(r=>r._div==='Physical');
+  const common  = cnt(r=>r._div==='Common');
+  const newH    = cnt(r=>r._hire==='New');
+  const repl    = cnt(r=>r._hire==='Replacement');
+  const female  = cnt(r=>r._gen==='Female');
+  const male    = cnt(r=>r._gen==='Male');
+
+  const tatR = rows.filter(r=>r._tat!==null);
+  const avgOffer = avg(tatR.map(r=>r._tat));
+  const avgTotal = avg(rows.filter(r=>r._tatT!==null).map(r=>r._tatT));
+  const avgJoin  = avg(rows.filter(r=>r._tatJ!==null).map(r=>r._tatJ));
+
+  // TAT bands — compute from actual _tat values (Master_Data is source of truth)
+  const bands = {'≤30 Days':0,'31–45 Days':0,'46–90 Days':0,'>90 Days':0,'No Data':0};
+  rows.forEach(r=>{
+    if(r._tat===null){ bands['No Data']++; return; }
+    if(r._tat<=30)      bands['≤30 Days']++;
+    else if(r._tat<=45) bands['31–45 Days']++;
+    else if(r._tat<=90) bands['46–90 Days']++;
+    else                bands['>90 Days']++;
+  });
+
+  // Monthly breakdown by DOJ
+  const monthly = {};
+  rows.forEach(r=>{
+    if(!r._doj) return;
+    const k = `${r._doj.getFullYear()}-${String(r._doj.getMonth()+1).padStart(2,'0')}`;
+    if(!monthly[k]) monthly[k]={ Cyber:0, Physical:0, Common:0, tatS:0, tatN:0 };
+    monthly[k][r._div||'Common'] = (monthly[k][r._div||'Common']||0)+1;
+    if(r._tat!==null){ monthly[k].tatS+=r._tat; monthly[k].tatN++; }
+  });
+  const months = Object.keys(monthly).sort();
+  let peakMonth='', peakCount=0;
+  months.forEach(k=>{
+    const t=(monthly[k].Cyber||0)+(monthly[k].Physical||0)+(monthly[k].Common||0);
+    if(t>peakCount){ peakCount=t; peakMonth=k; }
+  });
+
+  // Source analytics
+  const srcCount={}, srcTatS={}, srcTatN={}, srcDiv={}, srcHT={};
+  rows.forEach(r=>{
+    const s=r._src;
+    srcCount[s]=(srcCount[s]||0)+1;
+    if(r._tat!==null){ srcTatS[s]=(srcTatS[s]||0)+r._tat; srcTatN[s]=(srcTatN[s]||0)+1; }
+    if(!srcDiv[s]) srcDiv[s]={ Cyber:0, Physical:0, Common:0 };
+    srcDiv[s][r._div||'Common']=(srcDiv[s][r._div||'Common']||0)+1;
+    if(!srcHT[s]) srcHT[s]={ New:0, Replacement:0 };
+    srcHT[s][r._hire==='Replacement'?'Replacement':'New']++;
+  });
+  const srcAvgTat={};
+  Object.keys(srcTatS).forEach(s=>{ srcAvgTat[s]=srcTatS[s]/srcTatN[s]; });
+
+  // Sub-source analytics (LinkedIn vs Naukri within Job Portal)
+  const portalBreak={
+    Cyber:   {LinkedIn:0,Naukri:0,Other:0},
+    Physical:{LinkedIn:0,Naukri:0,Other:0},
+    Common:  {LinkedIn:0,Naukri:0,Other:0},
+  };
+  rows.forEach(r=>{
+    if(r._src==='Job Portal'){
+      const div=r._div||'Common';
+      const ss=(r.subSrc||'').trim().toLowerCase();
+      const key=ss.includes('linkedin')?'LinkedIn':ss.includes('naukri')?'Naukri':'Other';
+      if(portalBreak[div]) portalBreak[div][key]++;
+    }
+  });
+
+  // Division TAT
+  const divTat={};
+  rows.forEach(r=>{
+    if(!divTat[r._div]) divTat[r._div]={s:0,n:0};
+    if(r._tat!==null){ divTat[r._div].s+=r._tat; divTat[r._div].n++; }
+  });
+
+  // Grade map
+  const gradeMap={};
+  rows.forEach(r=>{ const g=r.grade||'Unknown'; gradeMap[g]=(gradeMap[g]||0)+1; });
+
+  // Project / Location
+  const projMap={}, locMap={};
+  rows.forEach(r=>{
+    const p=r._proj||'(Unspecified)';
+    if(!projMap[p]) projMap[p]={total:0,cyber:0,physical:0,onroll:0,offroll:0,newH:0,repl:0,tatS:0,tatN:0};
+    projMap[p].total++;
+    if(r._div==='Cyber')    projMap[p].cyber++;
+    if(r._div==='Physical') projMap[p].physical++;
+    if(r._roll==='Onroll')  projMap[p].onroll++;
+    if(r._roll==='Offroll') projMap[p].offroll++;
+    if(r._hire==='New')          projMap[p].newH++;
+    if(r._hire==='Replacement')  projMap[p].repl++;
+    if(r._tat!==null){ projMap[p].tatS+=r._tat; projMap[p].tatN++; }
+    const l=r._loc||'(Unspecified)';
+    if(!locMap[l]) locMap[l]={total:0,cyber:0,physical:0};
+    locMap[l].total++;
+    if(r._div==='Cyber')    locMap[l].cyber++;
+    if(r._div==='Physical') locMap[l].physical++;
+  });
+
+  // Diversity heatmap (onroll only)
+  const divData={};
+  rows.filter(r=>r._roll==='Onroll').forEach(r=>{
+    const k=`${r.grade||'Unknown'}__${r._div||'Common'}`;
+    if(!divData[k]) divData[k]={M:0,F:0};
+    if(r._gen==='Male')   divData[k].M++;
+    if(r._gen==='Female') divData[k].F++;
+  });
+
+  // Gender × Hire Type
+  const genHT={ New:{M:0,F:0}, Replacement:{M:0,F:0} };
+  rows.forEach(r=>{
+    const ht=r._hire;
+    if(ht==='New'||ht==='Replacement'){
+      if(r._gen==='Male')   genHT[ht].M++;
+      if(r._gen==='Female') genHT[ht].F++;
+    }
+  });
+
+  const uniqProj = new Set(rows.filter(r=>r._proj&&r._proj!=='(Unspecified)').map(r=>r._proj)).size;
+  const uniqLoc  = new Set(rows.filter(r=>r._loc &&r._loc !=='(Unspecified)').map(r=>r._loc)).size;
+  const uniqRole = new Set(rows.filter(r=>r.pos).map(r=>r.pos)).size;
+
+  return {
+    total, onroll, offroll, cyber, physical, common, newH, repl, female, male,
+    avgOffer, avgTotal, avgJoin,
+    bands, monthly, months, peakMonth, peakCount,
+    srcCount, srcAvgTat, srcDiv, srcHT, divTat,
+    gradeMap, projMap, locMap, divData, genHT,
+    uniqProj, uniqLoc, uniqRole, rows, portalBreak,
+    f1, pct,
+  };
+}
+
+/* ═══ EXTRACT ROWS FROM XLSX ════════════════════════════════ */
+function extractRows(wb){
+  const ws = wb.Sheets['Master_Data'];
+  if(!ws) throw new Error("'Master_Data' sheet not found in the uploaded Excel file.");
+  // Use raw:false so XLSX converts serial dates to date strings; also try cellDates
+  const raw = XLSX.utils.sheet_to_json(ws, { raw:true, defval:null });
+  const col = (r,...names) => {
+    for(const n of names){
+      const v=r[n];
+      if(v!==undefined && v!==null && v!=='') return v;
+    }
+    return null;
+  };
+  return raw.map(r=>({
+    pos:   col(r,'Position Name'),
+    cand:  col(r,'Candidate Name'),
+    loc:   col(r,'Work Location'),
+    proj:  col(r,'Project'),
+    gen:   col(r,'Gender'),
+    div:   col(r,'Division'),
+    roll:  col(r,'Roll Type'),
+    grade: col(r,'Grade'),
+    hire:  col(r,'Hire Type'),
+    doj:   col(r,'DOJ'),
+    src:   col(r,'Source'),
+    subSrc:col(r,'Sub Source'),
+    tat:   col(r,'Time to Offer'),
+    tatJ:  col(r,'Offer→Join (Days)','Offer->Join (Days)','Offer-Join (Days)'),
+    tatT:  col(r,'Total TAT (Days)'),
+  }));
+}
+function extractRowsFromJSON(data){
+
+  const raw = data['Master_Data'];
+
+  if(!raw || !raw.length){
+    throw new Error("'Master_Data' sheet not found in backend JSON.");
+  }
+
+  const col = (r,...names) => {
+    for(const n of names){
+      const v = r[n];
+      if(v !== undefined && v !== null && v !== '') return v;
+    }
+    return null;
+  };
+
+  return raw.map(r => ({
+    pos:   col(r,'Position Name'),
+    cand:  col(r,'Candidate Name'),
+    loc:   col(r,'Work Location'),
+    proj:  col(r,'Project'),
+    gen:   col(r,'Gender'),
+    div:   col(r,'Division'),
+    roll:  col(r,'Roll Type'),
+    grade: col(r,'Grade'),
+    hire:  col(r,'Hire Type'),
+    doj:   col(r,'DOJ'),
+    src:   col(r,'Source'),
+    subSrc:col(r,'Sub Source'),
+    tat:   col(r,'Time to Offer'),
+    tatJ:  col(r,'Offer→Join (Days)','Offer->Join (Days)','Offer-Join (Days)'),
+    tatT:  col(r,'Total TAT (Days)'),
+  }));
+}
+/* ═══ FILE HANDLING ─────────────────────────────────────── */
+
+let modalDropReady = false;
+
+function openRefreshModal(){
+  document.getElementById('refreshModal').classList.add('open');
+  if(!modalDropReady){ attachDrop('modalDrop'); modalDropReady=true; }
+}
+function closeRefreshModal(){ document.getElementById('refreshModal').classList.remove('open'); }
+
+function handleFileInput(e){
+  if(e.target.files[0]) processFile(e.target.files[0]);
+  e.target.value='';
+}
+
+function attachDrop(id){
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e=>{ e.preventDefault(); el.classList.add('drag'); });
+  el.addEventListener('dragleave', ()=>el.classList.remove('drag'));
+  el.addEventListener('drop', e=>{
+    e.preventDefault(); el.classList.remove('drag');
+    const f=e.dataTransfer.files[0];
+    if(f && f.name.toLowerCase().endsWith('.xlsx')) processFile(f);
+    else toast('⚠ Please upload an .xlsx file');
+  });
+  el.addEventListener('click', ()=>document.getElementById('fileInput').click());
+}
+
+/*
+async function processFile(file){
+  closeRefreshModal();
+  document.getElementById('uploadOverlay').classList.remove('open');
+  toast('⏳ Processing ' + file.name + '…', 8000);
+  try{
+    const buf  = await file.arrayBuffer();
+    const wb   = XLSX.read(buf, { type:'array', cellDates:true });
+    const rows = extractRows(wb);
+    if(!rows.length) throw new Error('No data rows found in Master_Data sheet.');
+    const d = compute(rows);
+    renderAll(d);
+    document.getElementById('statusDot').className='dot pulse';
+    document.getElementById('tsLabel').textContent=`Updated ${new Date().toLocaleTimeString('en-IN',{hour12:true})}`;
+    toast(`✓ ${rows.length} records loaded from ${file.name}`);
+  } catch(err){
+    toast('⚠ ' + err.message, 5000);
+    console.error(err);
+  }
+}
+  */
+
+/* ═══ ADVANCED DIVERSITY VIZ — V3 (Dot Matrix + Grade Focus Orbit) ═════ */
+function renderAdvancedDiversityViz(d){
+  const container = document.getElementById('divAdvViz');
+  if(!container) return;
+
+  const GRADE_ORDER_ALL = ['GET','Jr. Executive','Executive','Sr. Executive','Officer','AM','DM','Manager','Sr. Manager','DGM','GM'];
+  const DIVS = ['Cyber','Physical','Common'];
+  const DIV_CLR = {Cyber:'#005A9E', Physical:'#C84800', Common:'#6040A0'};
+
+
+  // Build grade data from d.divData
+  const grades = GRADE_ORDER_ALL.filter(g => DIVS.some(dv => {
+    const e = d.divData[`${g}__${dv}`]; return e && (e.M+e.F)>0;
+  }));
+
+  const gradeData = grades.map(g => {
+    const divs = DIVS.map(dv => {
+      const e = d.divData[`${g}__${dv}`]||{M:0,F:0};
+      const tot = e.M+e.F;
+      return {div:dv, M:e.M, F:e.F, tot, fpct: tot?Math.round(e.F/tot*100):null};
+    });
+    const tM = divs.reduce((s,dv)=>s+dv.M,0);
+    const tF = divs.reduce((s,dv)=>s+dv.F,0);
+    const tot = tM+tF;
+    return {g, divs, tM, tF, tot, fpct: tot?Math.round(tF/tot*100):null};
+  });
+
+  function fPctClr(fpct, tot){
+    if(!tot||fpct===null) return '#DDE3EE';
+    if(fpct===0) return '#C8102E';
+    if(fpct<15) return '#B85C00';
+    if(fpct<30) return '#005A9E';
+    return '#007A4D';
+  }
+  function fFill(fpct){
+    if(fpct===null||fpct===undefined) return '#EFF2F8';
+    if(fpct===0) return 'rgba(200,16,46,0.18)';
+    const o = 0.08 + (fpct/100)*0.80;
+    return `rgba(96,64,160,${o.toFixed(2)})`;
+  }
+
+  // ── State ──
+  let focusedGrade = grades[0]||null;
+  let dmFocusGrade = null;
+  let dmFocusDiv = null;
+
+  // ── Layout container — two components side by side ──
+  container.innerHTML = `
+    <style>
+      /* ── DOT MATRIX ENHANCED ── */
+      .dm-wrap{background:#fff;border:1px solid var(--g200);border-radius:var(--r2);padding:22px 24px 20px;box-shadow:var(--shadow-xs);margin-bottom:14px;}
+      .dm-header-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:16px;}
+      .dm-title-block{}
+      .dm-title{font-family:var(--fh);font-size:17px;font-weight:800;color:var(--t1);text-transform:uppercase;letter-spacing:.5px;}
+      .dm-sub{font-size:12px;color:var(--t3);margin-top:3px;line-height:1.5;}
+      .dm-controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+      .dm-ctrl-btn{background:var(--g100);border:1px solid var(--g200);border-radius:4px;padding:4px 10px;font-family:var(--fh);font-size:10.5px;font-weight:700;color:var(--t2);cursor:pointer;text-transform:uppercase;letter-spacing:.6px;transition:all .14s;}
+      .dm-ctrl-btn:hover{background:var(--g200);color:var(--t1);}
+      .dm-ctrl-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+      .dm-reset-btn{background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);border-radius:4px;padding:4px 10px;font-family:var(--fh);font-size:10.5px;font-weight:700;color:var(--red);cursor:pointer;text-transform:uppercase;letter-spacing:.6px;transition:all .14s;display:none;}
+      .dm-reset-btn.visible{display:inline-block;}
+      .dm-reset-btn:hover{background:rgba(200,16,46,0.15);}
+      .dm-grid-area{overflow-x:auto;overflow-y:visible;}
+      .dm-grid-inner{min-width:540px;}
+      /* col headers */
+      .dm-col-headers{display:grid;margin-bottom:6px;}
+      .dm-col-hdr{padding:6px 10px;font-family:var(--fh);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;text-align:center;border-radius:4px 4px 0 0;cursor:pointer;transition:all .14s;user-select:none;}
+      .dm-col-hdr:hover{opacity:.8;}
+      .dm-col-hdr.focused{outline:2px solid currentColor;outline-offset:-2px;}
+      /* row */
+      .dm-row{display:grid;margin-bottom:3px;border-radius:6px;transition:background .13s;}
+      .dm-row:hover{background:rgba(0,32,92,0.03);}
+      .dm-row.dimmed{opacity:.3;}
+      .dm-row.focused-row{background:rgba(0,32,92,0.05);}
+      /* grade label */
+      .dm-grade-lbl{display:flex;flex-direction:column;justify-content:center;padding:8px 12px 8px 4px;}
+      .dm-grade-name{font-family:var(--fh);font-size:12px;font-weight:800;color:var(--t1);white-space:nowrap;}
+      .dm-grade-stat{font-size:10px;font-weight:700;margin-top:2px;}
+      /* dot cell */
+      .dm-cell{padding:6px 8px;position:relative;cursor:pointer;border-radius:5px;transition:all .15s;}
+      .dm-cell:hover{background:rgba(0,0,0,0.04);}
+      .dm-cell.dimmed-cell{opacity:.25;pointer-events:none;}
+      .dm-cell.focused-cell{box-shadow:0 0 0 2px rgba(0,32,92,0.25);background:rgba(0,32,92,0.03);}
+      .dm-cell.zero-cell{opacity:.35;}
+      .dm-dots-svg{display:block;}
+      .dm-cell-foot{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;padding-top:3px;border-top:1px solid var(--g100);}
+      .dm-cell-tot{font-family:var(--fh);font-size:13px;font-weight:800;color:var(--t1);}
+      .dm-cell-fpct{font-family:var(--fh);font-size:12px;font-weight:800;}
+      /* dm tooltip */
+      .dm-tooltip{position:fixed;z-index:9999;background:var(--white);border:1px solid var(--g200);border-radius:10px;
+        padding:12px 15px;box-shadow:0 8px 32px rgba(0,20,80,0.16);min-width:190px;pointer-events:none;display:none;
+        font-size:12px;transition:opacity .1s;}
+      .dm-tip-grade{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--t1);margin-bottom:2px;}
+      .dm-tip-div{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+      .dm-tip-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:4px;color:var(--t2);}
+      .dm-tip-row strong{color:var(--t1);font-weight:700;}
+      .dm-tip-divider{height:1px;background:var(--g100);margin:6px 0;}
+      .dm-tip-fpct{font-family:var(--fh);font-size:22px;font-weight:800;line-height:1;margin-top:2px;}
+      .dm-tip-bar{height:6px;border-radius:3px;background:var(--g100);margin-top:6px;overflow:hidden;}
+      .dm-tip-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+      /* dm summary bar */
+      .dm-summary{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--g100);}
+      .dm-sum-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--t2);}
+      .dm-sum-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+      /* ── GRADE FOCUS ORBIT ENHANCED ── */
+      .gfo-wrap{background:#fff;border:1px solid var(--g200);border-radius:var(--r2);padding:22px 24px 20px;box-shadow:var(--shadow-xs);margin-bottom:14px;}
+      .gfo-header-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:16px;}
+      .gfo-title{font-family:var(--fh);font-size:17px;font-weight:800;color:var(--t1);text-transform:uppercase;letter-spacing:.5px;}
+      .gfo-sub{font-size:12px;color:var(--t3);margin-top:3px;line-height:1.5;}
+      .gfo-grade-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+      .gfo-tab{background:var(--g100);border:1px solid var(--g200);border-radius:5px;padding:5px 11px;
+        font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+        color:var(--t2);cursor:pointer;transition:all .16s;user-select:none;}
+      .gfo-tab:hover{background:var(--g200);color:var(--t1);}
+      .gfo-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 8px rgba(0,32,92,0.2);}
+      .gfo-body{display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:start;}
+      .gfo-canvas-wrap{position:relative;display:flex;justify-content:center;align-items:center;}
+      .gfo-sidebar{}
+      /* Stats panel */
+      .gfo-stat-hero{background:linear-gradient(135deg,var(--navy2) 0%,var(--navy) 100%);border-radius:8px;padding:16px 18px;margin-bottom:10px;}
+      .gfo-stat-hero-v{font-family:var(--fh);font-size:52px;font-weight:800;line-height:1;color:#fff;}
+      .gfo-stat-hero-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,0.5);margin-top:4px;}
+      .gfo-stat-hero-sub{font-size:12px;color:rgba(255,255,255,0.6);margin-top:8px;}
+      .gfo-div-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+      .gfo-div-card{background:var(--g50);border:1px solid var(--g200);border-radius:6px;padding:12px 14px;cursor:pointer;transition:all .14s;}
+      .gfo-div-card:hover{border-color:var(--g300);background:var(--g100);}
+      .gfo-div-card.active-div{border-width:2px;}
+      .gfo-div-card-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+      .gfo-div-name{font-family:var(--fh);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;}
+      .gfo-div-total{font-family:var(--fh);font-size:20px;font-weight:800;color:var(--t1);}
+      .gfo-div-gbar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:5px;}
+      .gfo-div-gbar-m{background:#005A9E;transition:flex .4s;}
+      .gfo-div-gbar-f{background:#6040A0;transition:flex .4s;}
+      .gfo-div-gbar-empty{background:var(--g200);flex:1;}
+      .gfo-div-mf{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);font-weight:600;}
+      .gfo-gender-summary{background:var(--g50);border:1px solid var(--g200);border-radius:6px;padding:12px 14px;}
+      .gfo-gen-title{font-family:var(--fh);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--t3);margin-bottom:10px;}
+      .gfo-gen-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+      .gfo-gen-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+      .gfo-gen-lbl{font-size:12px;color:var(--t2);flex:1;}
+      .gfo-gen-val{font-family:var(--fh);font-size:16px;font-weight:800;color:var(--t1);}
+      .gfo-gen-pct{font-size:10px;color:var(--t3);margin-left:4px;}
+      .gfo-gen-bar{height:5px;border-radius:3px;margin-top:3px;margin-bottom:8px;overflow:hidden;background:var(--g200);}
+      .gfo-gen-bar-fill{height:100%;border-radius:3px;transition:width .45s cubic-bezier(.4,0,.2,1);}
+      /* orbit tooltip */
+      .gfo-tooltip{position:fixed;z-index:9999;background:#fff;border:1px solid var(--g200);border-radius:10px;
+        padding:12px 15px;box-shadow:0 8px 32px rgba(0,20,80,0.16);min-width:180px;pointer-events:none;display:none;font-size:12px;}
+      .gfo-tip-title{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--t1);margin-bottom:6px;}
+      .gfo-tip-row{display:flex;justify-content:space-between;gap:12px;color:var(--t2);margin-bottom:3px;}
+      .gfo-tip-row strong{color:var(--t1);}
+      /* target indicator */
+      .gfo-target-flag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;
+        padding:3px 9px;border-radius:3px;text-transform:uppercase;letter-spacing:.6px;margin-top:4px;}
+      /* two-col layout removed — orbit is now full-width */
+      .adv-single-col{margin-bottom:14px;}
+      @media(max-width:1100px){.gfo-body{grid-template-columns:1fr;}}
+    </style>
+
+    <div class="adv-single-col">
+      <!-- Grade Representation Orbit — full width -->
+      <div class="gfo-wrap" id="advFocusOrbit" style="margin-bottom:0"></div>
+    </div>
+
+    <div class="gfo-tooltip" id="gfoTooltip"></div>
+  `;
+
+  // ══════════════════════════════════════════════════════
+  // COMPONENT A: ENHANCED DOT MATRIX
+  // ══════════════════════════════════════════════════════
+  function buildEnhancedDotMatrix(){
+    const el = document.getElementById('advDotMatrix');
+    if(!el) return;
+
+    const activeDivs = DIVS.filter(dv => gradeData.some(r => r.divs.find(d2=>d2.div===dv&&d2.tot>0)));
+    const DOT_R = 5, DOT_GAP = 2.5, COLS = 7;
+    const CELL_DOT_W = COLS*(DOT_R*2+DOT_GAP);
+
+    function fpctClr(fpct,tot){
+      if(!tot||fpct===null) return '#DDE3EE';
+      if(fpct===0) return '#C8102E';
+      if(fpct<15)  return '#B85C00';
+      if(fpct<30)  return '#005A9E';
+      return '#007A4D';
+    }
+
+    function renderDotCell(cell, highlight){
+      if(!cell||!cell.tot){
+        return `<div class="dm-cell zero-cell" style="min-height:60px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:18px;color:var(--g300)">—</span></div>`;
+      }
+      const rows = Math.ceil(cell.tot/COLS);
+      const svgH = rows*(DOT_R*2+DOT_GAP)+2;
+      const svgW = CELL_DOT_W+2;
+      let dots='';
+      const totalDots = cell.M + cell.F;
+      for(let i=0;i<cell.M;i++){
+        const col=i%COLS, row=Math.floor(i/COLS);
+        const cx=col*(DOT_R*2+DOT_GAP)+DOT_R+1;
+        const cy=row*(DOT_R*2+DOT_GAP)+DOT_R+1;
+        dots+=`<circle cx="${cx}" cy="${cy}" r="${DOT_R}" fill="rgba(0,90,158,0.78)" stroke="#005A9E" stroke-width="0.5">
+          <animate attributeName="r" from="0" to="${DOT_R}" dur="0.3s" fill="freeze" begin="${(i*0.012).toFixed(3)}s"/>
+        </circle>`;
+      }
+      for(let i=0;i<cell.F;i++){
+        const idx=cell.M+i;
+        const col=idx%COLS, row=Math.floor(idx/COLS);
+        const cx=col*(DOT_R*2+DOT_GAP)+DOT_R+1;
+        const cy=row*(DOT_R*2+DOT_GAP)+DOT_R+1;
+        dots+=`<circle cx="${cx}" cy="${cy}" r="${DOT_R}" fill="rgba(96,64,160,0.90)" stroke="#6040A0" stroke-width="0.5">
+          <animate attributeName="r" from="0" to="${DOT_R}" dur="0.3s" fill="freeze" begin="${(idx*0.012).toFixed(3)}s"/>
+        </circle>`;
+      }
+      const fpct = cell.fpct;
+      const fc = fpctClr(fpct,cell.tot);
+      const isFocused = (dmFocusDiv===null||dmFocusDiv===cell.div);
+      return `
+        <div class="dm-cell${isFocused?'':' dimmed-cell'}${highlight?' focused-cell':''}"
+          data-grade="${cell._grade||''}" data-div="${cell.div}"
+          data-m="${cell.M}" data-f="${cell.F}" data-tot="${cell.tot}" data-fpct="${fpct??'—'}"
+          onmouseenter="dmCellHover(event,this)" onmouseleave="dmCellLeave()"
+          onclick="dmCellClick(this)">
+          <svg width="${svgW}" height="${svgH}" class="dm-dots-svg" viewBox="0 0 ${svgW} ${svgH}">${dots}</svg>
+          <div class="dm-cell-foot">
+            <span class="dm-cell-tot">${cell.tot}</span>
+            <span class="dm-cell-fpct" style="color:${fc}">${fpct!==null?fpct+'%F':'—'}</span>
+          </div>
+        </div>`;
+    }
+
+    // Build grid HTML
+    const LABEL_W = 120;
+    const COL_W = Math.max(CELL_DOT_W+22, 100);
+    const TOTAL_COLS = activeDivs.length+1;
+    const gridTemplate = `${LABEL_W}px ${activeDivs.map(()=>COL_W+'px').join(' ')}`;
+
+    // Column header HTML
+    let colHdrs = `<div class="dm-col-headers" style="grid-template-columns:${gridTemplate}">
+      <div style="padding:0 4px"></div>`;
+    activeDivs.forEach(dv=>{
+      const isActive = dmFocusDiv===dv;
+      colHdrs+=`<div class="dm-col-hdr${isActive?' focused':''}" style="color:${DIV_CLR[dv]};background:${DIV_CLR[dv]}14;"
+        data-div="${dv}" onclick="dmDivClick('${dv}')">${dv}</div>`;
+    });
+    colHdrs+='</div>';
+
+    // Rows HTML
+    let rowsHtml='';
+    gradeData.forEach((row,ri)=>{
+      const isGradeFocused = dmFocusGrade!==null && dmFocusGrade===row.g;
+      const isGradeDimmed  = dmFocusGrade!==null && dmFocusGrade!==row.g;
+      const fpct = row.fpct, fc = fpctClr(fpct,row.tot);
+      rowsHtml+=`<div class="dm-row${isGradeDimmed?' dimmed':''}${isGradeFocused?' focused-row':''}" 
+        style="grid-template-columns:${gridTemplate};cursor:pointer"
+        onclick="dmGradeClick('${row.g}')">
+        <div class="dm-grade-lbl">
+          <span class="dm-grade-name">${row.g}</span>
+          <span class="dm-grade-stat" style="color:${fc}">${fpct!==null?fpct+'% F':''} · ${row.tot}</span>
+        </div>`;
+      activeDivs.forEach(dv=>{
+        const cell = row.divs.find(d2=>d2.div===dv);
+        const c = cell ? {...cell, _grade:row.g} : null;
+        const hl = isGradeFocused && (dmFocusDiv===null||dmFocusDiv===dv);
+        rowsHtml+=renderDotCell(c, hl);
+      });
+      rowsHtml+='</div>';
+    });
+
+    // Summary
+    const totalM = gradeData.reduce((s,r)=>s+r.tM,0);
+    const totalF = gradeData.reduce((s,r)=>s+r.tF,0);
+    const totalAll = totalM+totalF;
+    const overallFpct = totalAll?Math.round(totalF/totalAll*100):0;
+    const fc2 = fpctClr(overallFpct,totalAll);
+
+    el.innerHTML=`
+      <div class="dm-header-row">
+        <div class="dm-title-block">
+          <div class="dm-title">Dot Matrix — Every Hire Visualized</div>
+          <div class="dm-sub">Each dot = 1 onroll hire · <span style="color:#005A9E;font-weight:700">● Male</span> · <span style="color:#6040A0;font-weight:700">● Female</span> · Click any grade row or division header to isolate</div>
+        </div>
+        <div class="dm-controls">
+          <button class="dm-reset-btn${(dmFocusGrade||dmFocusDiv)?' visible':''}" id="dmResetBtn" onclick="dmReset()">✕ Reset</button>
+        </div>
+      </div>
+      <div class="dm-grid-area">
+        <div class="dm-grid-inner">
+          ${colHdrs}
+          ${rowsHtml}
+        </div>
+      </div>
+      <div class="dm-summary">
+        <div class="dm-sum-item"><span class="dm-sum-dot" style="background:rgba(0,90,158,0.78);border:1px solid #005A9E"></span>${totalM} Male</div>
+        <div class="dm-sum-item"><span class="dm-sum-dot" style="background:rgba(96,64,160,0.90);border:1px solid #6040A0"></span>${totalF} Female</div>
+        <div class="dm-sum-item" style="margin-left:auto">
+          <span style="font-family:var(--fh);font-size:16px;font-weight:800;color:${fc2}">${overallFpct}% Female</span>
+          <span style="font-size:11px;color:var(--t3);margin-left:4px">of ${totalAll} onroll</span>
+        </div>
+      </div>`;
+
+    // Wire global interaction handlers
+    window.dmCellHover = function(e, el){
+      const tip = document.getElementById('dmTooltip');
+      if(!tip) return;
+      const g=el.dataset.grade, dv=el.dataset.div, m=+el.dataset.m, f=+el.dataset.f, tot=+el.dataset.tot, fp=el.dataset.fpct;
+      const fp2 = fp==='—'?null:+fp;
+      const fc3=fpctClr(fp2,tot);
+      tip.innerHTML=`
+        <div class="dm-tip-grade">${g}</div>
+        <div class="dm-tip-div" style="color:${DIV_CLR[dv]||'#334E6B'}">${dv}</div>
+        <div class="dm-tiprow" style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;color:var(--t2)">
+          <span>👤 Total</span><strong style="color:var(--t1)">${tot}</strong>
+        </div>
+        <div class="dm-tiprow" style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;color:#005A9E">
+          <span>♂ Male</span><strong>${m}</strong>
+        </div>
+        <div class="dm-tiprow" style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;color:#6040A0">
+          <span>♀ Female</span><strong>${f}</strong>
+        </div>
+        <div class="dm-tip-divider"></div>
+        <div class="dm-tip-fpct" style="color:${fc3}">${fp==='—'?'—':fp+'% F'}</div>
+        <div class="dm-tip-bar"><div class="dm-tip-bar-fill" style="width:${fp2||0}%;background:${fc3}"></div></div>`;
+      tip.style.display='block';
+      tip.style.left=(e.clientX+14)+'px';
+      tip.style.top=(e.clientY-20)+'px';
+    };
+    window.dmCellLeave=function(){const t=document.getElementById('dmTooltip');if(t)t.style.display='none';};
+    window.dmCellClick=function(el){ const g=el.dataset.grade,dv=el.dataset.div; dmFocusGrade=g; dmFocusDiv=dv; buildEnhancedDotMatrix(); };
+    window.dmGradeClick=function(g){ dmFocusGrade=dmFocusGrade===g?null:g; dmFocusDiv=null; buildEnhancedDotMatrix(); };
+    window.dmDivClick=function(dv){ dmFocusDiv=dmFocusDiv===dv?null:dv; buildEnhancedDotMatrix(); };
+    window.dmReset=function(){ dmFocusGrade=null; dmFocusDiv=null; buildEnhancedDotMatrix(); };
+  }
+
+  // ══════════════════════════════════════════════════════
+  // COMPONENT B: ENHANCED GRADE FOCUS ORBIT
+  // ══════════════════════════════════════════════════════
+  function buildEnhancedFocusOrbit(){
+    const el = document.getElementById('advFocusOrbit');
+    if(!el) return;
+
+    const row = gradeData.find(r=>r.g===focusedGrade)||gradeData[0];
+    if(!row){ el.innerHTML='<div class="gfo-title">No data</div>'; return; }
+
+
+    function fPctClr(fpct,tot){
+      if(!tot||fpct===null) return '#DDE3EE';
+      if(fpct===0) return '#C8102E';
+      if(fpct<15) return '#B85C00';
+      if(fpct<30) return '#005A9E';
+      return '#007A4D';
+    }
+
+    // Grade tabs
+    const tabsHtml = gradeData.map(r=>`
+      <div class="gfo-tab${r.g===row.g?' active':''}" onclick="gfoSetGrade('${r.g}')">${r.g}</div>`).join('');
+
+    // SVG orbit — single outer ring, no inner ring
+    const W=400,H=400,cx=W/2,cy=H/2;
+    const R_OUT=165,RW_OUT=46,R_CTR=56;
+    const GAP=0.05;
+    const activeDivs2=row.divs.filter(dv=>dv.tot>0);
+    const total=row.tot;
+
+    function arcPath(cx,cy,r,sa,ea,rw){
+      const s1=sa-Math.PI/2,e1=ea-Math.PI/2;
+      const x1=cx+r*Math.cos(s1),y1=cy+r*Math.sin(s1);
+      const x2=cx+r*Math.cos(e1),y2=cy+r*Math.sin(e1);
+      const ir=r-rw;
+      const ix1=cx+ir*Math.cos(e1),iy1=cy+ir*Math.sin(e1);
+      const ix2=cx+ir*Math.cos(s1),iy2=cy+ir*Math.sin(s1);
+      const la=(ea-sa)>Math.PI?1:0;
+      return `M${x1},${y1} A${r},${r} 0 ${la},1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${la},0 ${ix2},${iy2} Z`;
+    }
+
+    let svgContent='';
+
+    // Background track — single ring only
+    svgContent+=`<circle cx="${cx}" cy="${cy}" r="${R_OUT-RW_OUT/2}" fill="none" stroke="#EFF2F8" stroke-width="${RW_OUT}"/>`;
+
+    // Outer ring: divisions — arcs only, NO text on arcs
+    // Sidebar cards already explain each division in full detail
+    let a=GAP/2;
+    const arcMidpoints=[]; // store for connector dots
+    activeDivs2.forEach((cell,di)=>{
+      if(!total) return;
+      const span=(cell.tot/total)*(2*Math.PI)-GAP;
+      if(span<=0) return;
+      const sa=a,ea=a+span;
+      const clr=DIV_CLR[cell.div]||'#334E6B';
+      const fOpacity = cell.fpct!==null ? 0.12+(cell.fpct/100)*0.72 : 0.1;
+      const fill=`rgba(96,64,160,${fOpacity.toFixed(2)})`;
+      const midA=sa+span/2-Math.PI/2;
+      const midR=R_OUT-RW_OUT/2;
+      arcMidpoints.push({div:cell.div, clr, mx:cx+midR*Math.cos(midA), my:cy+midR*Math.sin(midA)});
+
+      svgContent+=`<path d="${arcPath(cx,cy,R_OUT,sa,ea,RW_OUT)}" fill="${fill}" stroke="${clr}" stroke-width="2.5"
+        style="cursor:pointer;transition:filter 0.15s"
+        data-div="${cell.div}" data-m="${cell.M}" data-f="${cell.F}" data-tot="${cell.tot}" data-fpct="${cell.fpct??'—'}"
+        onmouseenter="gfoArcHover(event,this)" onmouseleave="gfoArcLeave()"
+        onclick="gfoDivCardClick('${cell.div}')">
+        <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="${di*0.1}s" fill="freeze"/>
+      </path>`;
+
+      // Small division-coloured dot at arc midpoint — orientation cue only, no text
+      svgContent+=`<circle cx="${cx+midR*Math.cos(midA)}" cy="${cy+midR*Math.sin(midA)}"
+        r="5" fill="${clr}" opacity="0.9" pointer-events="none"/>`;
+
+      a=ea+GAP;
+    });
+
+    // Center circle — more spacious now inner ring is gone
+    const fpct=row.fpct, fc=fPctClr(fpct,row.tot);
+    svgContent+=`<circle cx="${cx}" cy="${cy}" r="${R_CTR}" fill="#fff" stroke="#EEF1F8" stroke-width="1.5"/>`;
+    svgContent+=`<text x="${cx}" y="${cy-14}" font-family="Barlow Condensed,sans-serif" font-size="11"
+      font-weight="700" fill="#A0AABB" text-anchor="middle" letter-spacing="0.5">${row.g.toUpperCase()}</text>`;
+    svgContent+=`<text x="${cx}" y="${cy+16}" font-family="Barlow Condensed,sans-serif" font-size="32"
+      font-weight="900" fill="${fc}" text-anchor="middle">${fpct!==null?fpct+'%':'—'}</text>`;
+    svgContent+=`<text x="${cx}" y="${cy+30}" font-family="Barlow,sans-serif" font-size="9"
+      fill="#A0AABB" text-anchor="middle">female</text>`;
+
+    // Arc width note at bottom — single clean line
+    svgContent+=`<text x="${cx}" y="${H-4}" font-family="Barlow,sans-serif" font-size="8.5"
+      fill="#C8D4E3" text-anchor="middle">arc width = headcount · fill intensity = female %</text>`;
+
+    // Sidebar: hero stat + div cards + gender summary
+
+    let divCardsHtml='';
+    activeDivs2.forEach(cell=>{
+      const clr=DIV_CLR[cell.div]||'#334E6B';
+      const fpct2=cell.fpct;
+      const fc2=fPctClr(fpct2,cell.tot);
+      const mPct=cell.tot?Math.round(cell.M/cell.tot*100):0;
+      const fPct2=cell.tot?Math.round(cell.F/cell.tot*100):0;
+      divCardsHtml+=`
+        <div class="gfo-div-card" style="border-color:${clr}22" onclick="gfoDivCardClick('${cell.div}')">
+          <div class="gfo-div-card-top">
+            <span class="gfo-div-name" style="color:${clr}">${cell.div}</span>
+            <span class="gfo-div-total">${cell.tot}</span>
+          </div>
+          <div class="gfo-div-gbar">
+            <div class="gfo-div-gbar-m" style="flex:${cell.M||0}"></div>
+            <div class="gfo-div-gbar-f" style="flex:${cell.F||0}"></div>
+            ${!cell.tot?'<div class="gfo-div-gbar-empty"></div>':''}
+          </div>
+          <div class="gfo-div-mf">
+            <span style="color:#005A9E">${cell.M}M (${mPct}%)</span>
+            <span style="color:${fc2};font-weight:800">${cell.F}F — ${fpct2!==null?fpct2+'%F':'—'}</span>
+          </div>
+        </div>`;
+    });
+
+    const totalFpct=fPctClr(row.fpct,row.tot);
+    const mBarW=row.tot?Math.round(row.tM/row.tot*100):0;
+    const fBarW=row.tot?Math.round(row.tF/row.tot*100):0;
+
+    el.innerHTML=`
+      <div class="gfo-header-row">
+        <div>
+          <div class="gfo-title">Grade &amp; Division — Representation Orbit</div>
+          <div class="gfo-sub">Arc width = division headcount share · Fill intensity = female % · Hover arc for detail · Full breakdown in sidebar</div>
+        </div>
+      </div>
+      <div class="gfo-grade-tabs">${tabsHtml}</div>
+      <div class="gfo-body">
+        <div class="gfo-sidebar">
+          <div class="gfo-stat-hero">
+            <div class="gfo-stat-hero-v" style="color:${fpct!==null?(fpct>=30?'#4ade80':fpct>=15?'#93c5fd':'#fca5a5'):'rgba(255,255,255,0.4)'}">${fpct!==null?fpct+'%':'—'}</div>
+            <div class="gfo-stat-hero-l">Female · ${row.g}</div>
+            <div class="gfo-stat-hero-sub">${row.tM} Male · ${row.tF} Female · ${row.tot} Total</div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="gfo-div-cards">${divCardsHtml}</div>
+          <div class="gfo-gender-summary">
+            <div class="gfo-gen-title">Gender Breakdown — ${row.g}</div>
+            <div class="gfo-gen-row">
+              <span class="gfo-gen-dot" style="background:#005A9E"></span>
+              <span class="gfo-gen-lbl">Male</span>
+              <span class="gfo-gen-val">${row.tM}<span class="gfo-gen-pct">${mBarW}%</span></span>
+            </div>
+            <div class="gfo-gen-bar"><div class="gfo-gen-bar-fill" style="width:${mBarW}%;background:#005A9E"></div></div>
+            <div class="gfo-gen-row">
+              <span class="gfo-gen-dot" style="background:#6040A0"></span>
+              <span class="gfo-gen-lbl">Female</span>
+              <span class="gfo-gen-val">${row.tF}<span class="gfo-gen-pct">${fBarW}%</span></span>
+            </div>
+            <div class="gfo-gen-bar"><div class="gfo-gen-bar-fill" style="width:${fBarW}%;background:#6040A0"></div></div>
+          </div>
+        </div>
+        <div class="gfo-canvas-wrap" style="flex-direction:column;gap:12px;">
+          <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">
+            ${svgContent}
+          </svg>
+          <div style="display:flex;gap:18px;justify-content:center;align-items:center;padding:10px 16px;background:var(--g50);border:1px solid var(--g200);border-radius:8px;flex-wrap:wrap;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3);flex-basis:100%;text-align:center;margin-bottom:4px;">Division Index</div>
+            ${activeDivs2.map(cell=>{
+              const clr=DIV_CLR[cell.div]||'#334E6B';
+              return `<div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:${clr};">
+                <span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${clr};flex-shrink:0;"></span>
+                ${cell.div}
+                <span style="font-size:10px;font-weight:600;color:var(--t3);font-family:'Barlow',sans-serif;">${cell.tot} hires</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    // Wire handlers
+    window.gfoSetGrade=function(g){ focusedGrade=g; buildEnhancedFocusOrbit(); };
+    window.gfoArcHover=function(e,el){
+      const tip=document.getElementById('gfoTooltip');
+      if(!tip) return;
+      const dv=el.dataset.div, m=el.dataset.m, f=el.dataset.f, tot=el.dataset.tot, fp=el.dataset.fpct;
+      const clr=DIV_CLR[dv]||'#334E6B';
+      const fp2=fp==='—'?null:+fp;
+      const fc=fPctClr(fp2,+tot);
+      tip.innerHTML=`
+        <div class="gfo-tip-title">${focusedGrade} · <span style="color:${clr}">${dv}</span></div>
+        <div class="gfo-tip-row"><span>👤 Total</span><strong>${tot}</strong></div>
+        <div class="gfo-tip-row" style="color:#005A9E"><span>♂ Male</span><strong>${m}</strong></div>
+        <div class="gfo-tip-row" style="color:#6040A0"><span>♀ Female</span><strong>${f}</strong></div>
+        <div style="margin:6px 0;height:1px;background:var(--g100)"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:${fc}">${fp==='—'?'—':fp+'% F'}</div>
+        `;
+      tip.style.display='block';
+      tip.style.left=(e.clientX+16)+'px';
+      tip.style.top=(e.clientY-20)+'px';
+    };
+    window.gfoArcLeave=function(){const t=document.getElementById('gfoTooltip');if(t)t.style.display='none';};
+    window.gfoDivCardClick=function(dv){
+      document.querySelectorAll('.gfo-div-card').forEach(c=>{
+        c.style.boxShadow=c.getAttribute('onclick')&&c.getAttribute('onclick').includes(dv)?`0 0 0 2px ${DIV_CLR[dv]||'#334E6B'}`:'none';
+      });
+    };
+  }
+
+  // ── Build panel ──
+  buildEnhancedFocusOrbit();
+}
+
+
+/* ═══ RENDER ALL ════════════════════════════════════════════ */
+function renderAll(d){
+  renderExecSummary(d);
+  renderKPIs(d);
+  renderMonthly(d);
+  renderDonut('hireTypeChart','hireTypeLeg','htCenter',[d.newH,d.repl],['New Hire','Replacement'],['#007A4D','#C8102E']);
+  renderDonut('rollTypeChart','rollTypeLeg','rtCenter',[d.onroll,d.offroll],['Onroll','Off-Roll'],['#005A9E','#C84800']);
+  renderDonut('divisionChart','divisionLeg','divCenter',[d.cyber,d.physical,d.common],['Cyber','Physical','Common'],[DIV_COLOR.Cyber,DIV_COLOR.Physical,DIV_COLOR.Common]);
+  renderSourceList(d); renderGradeList(d);
+  renderTATStats(d); renderTATBandChart(d); renderTATBandsGrid(d); renderTATMonthly(d); renderTATDiv(d);
+  renderSrcVolume(d); renderSrcDivDonuts(d); renderSrcDivTable(d);
+  renderGenderStats(d); renderGenderDivChart(d); renderGenderHireChart(d); renderAdvancedDiversityViz(d);
+  renderGeoInfographics(d); renderLocationMap(d);
+  updateSubs(d);
+}
+
+/* ═══ EXEC SUMMARY ══════════════════════════════════════════ */
+function renderExecSummary(d){
+  const cyberTat  = d.divTat['Cyber']?.n   ? d.f1(d.divTat['Cyber'].s/d.divTat['Cyber'].n)     : null;
+  const physTat   = d.divTat['Physical']?.n ? d.f1(d.divTat['Physical'].s/d.divTat['Physical'].n) : null;
+
+  // ── PRIORITY BANNER — THE ONE PROBLEM ──
+  const sorted0 = Object.entries(d.srcCount).sort((a,b)=>b[1]-a[1]);
+  const topSrc0 = sorted0[0]||['—',0], sec0=sorted0[1]||['—',0];
+  const top2pct0 = d.pct(topSrc0[1]+sec0[1], d.total);
+  const SENIOR0  = ['DGM','GM','Sr. Manager','Manager'];
+  let senF0=0, senT0=0;
+  SENIOR0.forEach(g=>['Cyber','Physical','Common'].forEach(dv=>{ const e=d.divData[`${g}__${dv}`]||{M:0,F:0}; senF0+=e.F; senT0+=e.M+e.F; }));
+  const senPct0 = senT0 ? d.pct(senF0,senT0) : 0;
+  const slowPct0 = d.pct(d.bands['>90 Days']||0, d.total);
+  const cyDiff0  = cyberTat&&physTat ? d.f1(physTat-cyberTat) : null;
+
+  // Score each problem by severity → pick the single worst
+  const problems = [
+    { score: top2pct0>60 ? top2pct0-60 : 0,
+      metric: top2pct0+'%', metricLabel: 'Channel Concentration',
+      headline: `${topSrc0[0]} + ${sec0[0]} = ${top2pct0}% of all hires`,
+      detail: `Your sourcing pipeline has a single-point-of-failure. ${topSrc0[0]} (${topSrc0[1]} hires) and ${sec0[0]} (${sec0[1]} hires) together account for nearly two-thirds of intake. Any disruption — consultant attrition, platform pricing, or market saturation — will directly crater hiring velocity.`,
+      action: 'Diversify sourcing now' },
+    { score: slowPct0>15 ? slowPct0*1.5 : 0,
+      metric: slowPct0+'%', metricLabel: 'Hires > 90 Days',
+      headline: `${d.bands['>90 Days']||0} hires took more than 90 days to close`,
+      detail: `${slowPct0}% of all hires exceeded 90 days — a threshold that signals process breakdown, not complexity. These roles are concentrated in Consultant-sourced Physical hires where avg TAT is ${physTat||'N/A'} days. Every delayed hire carries direct business cost.`,
+      action: 'Audit long-cycle roles' },
+    { score: senPct0<3 ? 30 : senPct0<8 ? 15 : 0,
+      metric: senPct0+'%', metricLabel: 'Female at Mgr+',
+      headline: `Diversity falls to ${senPct0}% female at Manager and above`,
+      detail: `Overall female representation is ${d.pct(d.female,d.total)}%, but it collapses to ${senPct0}% at Manager+ grades onroll. Without deliberate intervention at the DM/Manager hiring stage, the pipeline will not self-correct.`,
+      action: 'Set grade-level targets' },
+  ];
+  problems.sort((a,b)=>b.score-a.score);
+  const topProblem = problems[0];
+
+  // Priority banner removed — executive overview is infographic-first
+
+  // ── HERO STAT ROW: 1 dominant + 3 secondary ──
+  const heroEl = document.getElementById('execStats');
+  if(heroEl){
+    const sorted = Object.entries(d.srcCount).sort((a,b)=>b[1]-a[1]);
+    const topSrc  = sorted[0]||['—',0];
+    heroEl.innerHTML = `
+      <!-- HERO: Total Hires -->
+      <div class="exec-stat-hero">
+        <span class="hero-tag">FY 2025–26 · Talent Acquisition</span>
+        <div class="ev">${d.total}</div>
+        <div class="el">Total Hires</div>
+        <div class="esub">${d.uniqProj} projects &nbsp;·&nbsp; ${d.uniqLoc} locations &nbsp;·&nbsp; ${d.uniqRole} unique roles</div>
+      </div>
+      <!-- SECONDARY: New vs Replacement -->
+      <div class="exec-stat" style="--ec:#007A4D">
+        <div>
+          <div class="el">New Hire Share</div>
+          <div class="ev" style="color:#007A4D">${d.pct(d.newH,d.total)}<sup>%</sup></div>
+        </div>
+        <div class="esub">${d.newH} new &nbsp;·&nbsp; ${d.repl} replacements</div>
+      </div>
+      <!-- SECONDARY: Avg TAT -->
+      <div class="exec-stat" style="--ec:#B85C00">
+        <div>
+          <div class="el">Avg Offer TAT</div>
+          <div class="ev" style="color:#B85C00">${d.f1(d.avgOffer)}<sup>d</sup></div>
+        </div>
+        <div class="esub">Target: 30d</div>
+      </div>
+      <!-- SECONDARY: Gender Diversity -->
+      <div class="exec-stat" style="--ec:#6040A0">
+        <div>
+          <div class="el">Female Representation</div>
+          <div class="ev" style="color:#6040A0">${d.pct(d.female,d.total)}<sup>%</sup></div>
+        </div>
+        <div class="esub">${d.female} of ${d.total} hires</div>
+      </div>
+    `;
+  }
+
+  // ── NARRATIVE HIGHLIGHT CARDS (3-across with lead card) ──
+  const sorted = Object.entries(d.srcCount).sort((a,b)=>b[1]-a[1]);
+  const topSrc  = sorted[0]||['—',0], sec=sorted[1]||['—',0];
+  const top2pct = d.pct(topSrc[1]+sec[1], d.total);
+  const campTat = d.srcAvgTat['Campus']||null;
+  const campDiff= campTat ? d.f1(((d.avgOffer-campTat)/d.avgOffer)*100) : null;
+  const campFast= campDiff!==null && campDiff>0;
+  const cyDiff  = cyberTat&&physTat ? d.f1(physTat-cyberTat) : null;
+  const SENIOR  = ['DGM','GM','Sr. Manager','Manager'];
+  let senF=0, senT=0;
+  SENIOR.forEach(g=>{
+    ['Cyber','Physical','Common'].forEach(dv=>{
+      const e=d.divData[`${g}__${dv}`]||{M:0,F:0};
+      senF+=e.F; senT+=e.M+e.F;
+    });
+  });
+  const senPct = senT ? d.pct(senF,senT) : 0;
+  const dropPts= d.f1(d.pct(d.female,d.total)-senPct);
+
+  const highlightsEl = document.getElementById('execHighlights');
+  if(highlightsEl){
+    highlightsEl.innerHTML = `
+      <!-- LEAD: Sourcing concentration (biggest story) -->
+      <div class="hlcard-lead" style="--hlc:${top2pct>60?'#C8102E':'#B85C00'}">
+        <div class="hlt">① Sourcing Concentration</div>
+        <div class="hlv">${top2pct}% from 2 channels</div>
+        <div class="hlx"><strong>${topSrc[0]}</strong> (${topSrc[1]} hires, ${d.pct(topSrc[1],d.total)}%) and <strong>${sec[0]}</strong> (${sec[1]} hires, ${d.pct(sec[1],d.total)}%) together drive <strong>${top2pct}%</strong> of intake.${top2pct>60?' Any disruption to either materially impacts hiring velocity.':' Sourcing mix is reasonably balanced.'}</div>
+      </div>
+      <!-- SECONDARY: Senior diversity gap -->
+      <div class="hlcard" style="--hlc:${senPct<5?'#C8102E':'#6040A0'}">
+        <div class="hlt">③ Diversity Gap</div>
+        <div class="hlv">${senPct}% female at Mgr+</div>
+        <div class="hlx">Falls from <strong>${d.pct(d.female,d.total)}%</strong> overall to <strong>${senPct}%</strong> at Manager+ grades — a <strong>${dropPts}-point drop</strong> at senior levels.</div>
+      </div>
+    `;
+  }
+
+  // ── FLAGS / ALERTS (dynamic, only shown when triggered) ──
+  const flags=[];
+  // execAlerts hidden — removed from executive overview
+
+}
+
+/* ═══ SUB-HEADING HELPERS ═══════════════════════════════════ */
+function fmtMo(k){ const[y,m]=k.split('-'); return `${MO_LABELS[+m-1]} '${y.slice(2)}`; }
+function set(id,html){ const el=document.getElementById(id); if(el) el.innerHTML=html; }
+function showSoWhat(id, answerHtml, verdictHtml, verdictClass){
+  const el=document.getElementById(id);
+  if(el){ el.style.display='flex'; }
+  set(id.replace('SoWhat','SoWhatA').replace('So','SoWhatA').replace('What',''),answerHtml);
+  // handle different naming
+  const aEl = document.getElementById(id+'A');
+  if(aEl) aEl.innerHTML=answerHtml;
+  const vEl = document.getElementById(id.replace('SoWhat','Verdict').replace('So','').replace('What',''));
+  if(vEl){ vEl.innerHTML=verdictHtml; vEl.className='so-what-verdict '+verdictClass; }
+}
+
+function updateSubs(d){
+  const campTat = d.srcAvgTat['Campus'] ? d.f1(d.srcAvgTat['Campus'])+'d' : 'N/A';
+  const conTat  = d.srcAvgTat['Consultant'] ? d.f1(d.srcAvgTat['Consultant'])+'d' : '—';
+  const cyberTat= d.divTat['Cyber']?.n    ? d.f1(d.divTat['Cyber'].s/d.divTat['Cyber'].n)+'d'     : '—';
+  const physTat = d.divTat['Physical']?.n  ? d.f1(d.divTat['Physical'].s/d.divTat['Physical'].n)+'d' : '—';
+  const topProj = Object.entries(d.projMap).filter(([k])=>k!=='(Unspecified)').sort((a,b)=>b[1].total-a[1].total)[0];
+  const topLoc  = Object.entries(d.locMap).filter(([k])=>k!=='(Unspecified)').sort((a,b)=>b[1].total-a[1].total)[0];
+  const sorted  = Object.entries(d.srcCount).sort((a,b)=>b[1]-a[1]);
+  const top2Src = sorted.slice(0,2);
+  const topGrade= GRADE_ORDER.filter(g=>d.gradeMap[g]).map(g=>[g,d.gradeMap[g]]).sort((a,b)=>b[1]-a[1])[0];
+
+  set('execSub',`${d.total} hires · ${d.uniqProj} projects · ${d.uniqLoc} locations · FY 2025–26`);
+  set('overviewSub',`<strong>${d.total} total hires</strong> · ${d.uniqProj} projects · ${d.uniqLoc} locations`);
+  set('subMonthly', d.peakMonth?`Peak month: <strong>${fmtMo(d.peakMonth)} — ${d.peakCount} hires</strong>`:'Monthly distribution');
+  set('subHireType', `<strong>${d.pct(d.newH,d.total)}% are new positions</strong> — ${d.repl} replacements`);
+  set('subRollType', `<strong>${d.pct(d.onroll,d.total)}% Onroll</strong> — ${d.offroll} off-roll hires`);
+  set('subDivision', `<strong>Cyber leads at ${d.pct(d.cyber,d.total)}%</strong> vs. Physical ${d.pct(d.physical,d.total)}%`);
+  set('subSourceList', top2Src.length>=2?`<strong>${top2Src[0][0]} + ${top2Src[1][0]} = ${d.pct(top2Src[0][1]+top2Src[1][1],d.total)}%</strong> of volume`:'Channel mix');
+  set('subGradeList', topGrade?`<strong>${topGrade[0]} leads at ${topGrade[1]} hires</strong>`:'Grade distribution');
+  set('subTATPage', `Avg Offer TAT: <strong>${d.f1(d.avgOffer)}d</strong> &nbsp;·&nbsp; Avg Total TAT: <strong>${d.f1(d.avgTotal)}d</strong>`);
+  set('subTATBand', `<strong>${d.pct(d.bands['≤30 Days']||0,d.total)}%</strong> close within 30 days`);
+  set('subTATGrid', `<strong>${d.bands['>90 Days']||0} hires</strong> exceed 90-day threshold`);
+  set('subTATMonthly','Monthly average offer-to-acceptance turnaround');
+  set('subTATDiv', `Physical: <strong>${physTat}</strong> vs. Cyber: <strong>${cyberTat}</strong>`);
+  set('subSrcPage', `Campus closes fastest at avg <strong>${campTat}</strong>`);
+  set('subSrcVolume','Bar height = volume · line = Avg TAT per channel');
+  set('subSrcCyber', `<strong>${d.srcDiv['Job Portal']?.Cyber||0} via Job Portal</strong> — ${d.pct(d.srcDiv['Job Portal']?.Cyber||0,d.cyber)}% of Cyber volume`);
+  set('subSrcPhysical',`<strong>${d.srcDiv['Consultant']?.Physical||0} via Consultant</strong> — ${d.pct(d.srcDiv['Consultant']?.Physical||0,d.physical)}% of Physical volume`);
+  set('subSrcTable', `${Object.keys(d.srcCount).length} active channels with volume and TAT breakdown`);
+  set('subDivPage', `Overall: <strong>${d.pct(d.female,d.total)}% female</strong> — see grade-level breakdown below`);
+  set('subGenDiv',  `Onroll only — Physical ${d.pct(d.rows.filter(r=>r._div==='Physical'&&r._gen==='Female').length,d.physical)}%F vs. Cyber ${d.pct(d.rows.filter(r=>r._div==='Cyber'&&r._gen==='Female').length,d.cyber)}%F`);
+  set('subGenHire', `New hire diversity: <strong>${d.pct(d.genHT.New.F,d.newH)}%F</strong> · Replacement: ${d.pct(d.genHT.Replacement.F,d.repl)}%F`);
+  set('subHeatmap', 'Purple intensity = female share · red = zero female · click any row to expand');
+  set('subProjPage', topProj?`<strong>${topProj[0]} leads at ${topProj[1].total} hires</strong> (${d.pct(topProj[1].total,d.total)}% of intake)`:'-');
+  set('subProjChart', topProj?`Top 15 projects · <strong>${topProj[0]}: ${topProj[1].total} hires</strong>`:'Top 15 projects');
+  set('subLocChart',  topLoc?`Top 15 locations · <strong>${topLoc[0]}: ${topLoc[1].total} hires</strong>`:'Top 15 locations');
+  set('subProjTable', `${Object.keys(d.projMap).filter(k=>k!=='(Unspecified)').length} projects · amber TAT = above org average`);
+
+  // ── SO WHAT ANCHORS ──
+  // Overview so-what removed — replaced by hero stat row
+
+  // TAT: Are we fast enough?
+  const tatEl = document.getElementById('tatSoWhat');
+  if(tatEl){
+    tatEl.style.display='flex';
+    const fastPct = d.pct(d.bands['≤30 Days']||0,d.total);
+    const slowPct = d.pct(d.bands['>90 Days']||0,d.total);
+    const tatAns = document.getElementById('tatSoWhatA');
+    const tatV   = document.getElementById('tatVerdict');
+    const isSlow = d.f1(d.avgOffer) > 45;
+    if(tatAns) tatAns.innerHTML=`Avg offer TAT is <strong>${d.f1(d.avgOffer)} days</strong> against a 30-day target — that's <strong>${d.f1(d.avgOffer-30)} days over</strong>. Only ${fastPct}% of hires close within 30 days. ${slowPct}% exceed 90 days. ${isSlow?'Speed is a material problem requiring structural fixes, not process tweaks.':'Efficiency is above average but outliers require attention.'}`;
+    if(tatV){ tatV.innerHTML=isSlow?'⚠ Too Slow':'On Track'; tatV.className='so-what-verdict '+(isSlow?'verdict-critical':'verdict-ok'); }
+  }
+
+  // Source: Which channel is helping or hurting speed?
+  const srcEl = document.getElementById('srcSoWhat');
+  if(srcEl){
+    srcEl.style.display='flex';
+    const campTatN = d.srcAvgTat['Campus']||null;
+    const conTatN  = d.srcAvgTat['Consultant']||null;
+    const jpTatN   = d.srcAvgTat['Job Portal']||null;
+    const fastest  = Object.entries(d.srcAvgTat).filter(([s])=>d.srcCount[s]>=5).sort((a,b)=>a[1]-b[1])[0];
+    const slowest  = Object.entries(d.srcAvgTat).filter(([s])=>d.srcCount[s]>=5).sort((a,b)=>b[1]-a[1])[0];
+    const srcAns = document.getElementById('srcSoWhatA');
+    const srcV   = document.getElementById('srcVerdict');
+    const conSlow = conTatN && conTatN > (jpTatN||0)*1.3;
+    if(srcAns) srcAns.innerHTML=fastest?`<strong>${fastest[0]}</strong> closes fastest at <strong>${d.f1(fastest[1])}d avg</strong>. <strong>${slowest[0]}</strong> is slowest at <strong>${d.f1(slowest[1])}d</strong>. ${conSlow?`Consultant channel at ${d.f1(conTatN)}d is dragging overall TAT — it handles ${d.pct(d.srcCount['Consultant']||0,d.total)}% of volume.`:'Channel speed distribution is relatively balanced.'}`:' — ';
+    if(srcV){ srcV.innerHTML=conSlow?'⚠ Channel Imbalance':'Balanced'; srcV.className='so-what-verdict '+(conSlow?'verdict-warn':'verdict-ok'); }
+  }
+
+  // Diversity: Are we balanced?
+  const SENIOR = ['DGM','GM','Sr. Manager','Manager'];
+  let senF=0, senT=0;
+  SENIOR.forEach(g=>['Cyber','Physical','Common'].forEach(dv=>{ const e=d.divData[`${g}__${dv}`]||{M:0,F:0}; senF+=e.F; senT+=e.M+e.F; }));
+  const senPct = senT ? d.pct(senF,senT) : 0;
+  const overallFPct = d.pct(d.female,d.total);
+  const divEl = document.getElementById('divSoWhat');
+  if(divEl){
+    divEl.style.display='flex';
+    const divAns = document.getElementById('divSoWhatA');
+    const divV   = document.getElementById('divVerdict');
+    const isBad  = senPct < 5 || overallFPct < 10;
+    if(divAns) divAns.innerHTML=`<strong>${overallFPct}% female</strong> overall — but only <strong>${senPct}%</strong> at Manager+ grades. The ${d.f1(overallFPct-senPct)}-point drop at senior levels is the real story. ${isBad?'Without deliberate grade-level targets, the senior pipeline will not self-correct.':'Senior pipeline diversity needs continued monitoring.'}`;
+    if(divV){ divV.innerHTML=isBad?'⚠ Imbalanced':'Improving'; divV.className='so-what-verdict '+(isBad?'verdict-critical':'verdict-warn'); }
+  }
+
+  // Geography: Where is the bottleneck?
+  const geoEl = document.getElementById('geoSoWhat');
+  if(geoEl && topProj){
+    geoEl.style.display='flex';
+    const geoAns = document.getElementById('geoSoWhatA');
+    const geoV   = document.getElementById('geoVerdict');
+    const topProjTat = topProj[1].tatN ? d.f1(topProj[1].tatS/topProj[1].tatN) : null;
+    const isSlow = topProjTat && topProjTat > d.f1(d.avgOffer)*1.2;
+    if(geoAns) geoAns.innerHTML=`<strong>${topProj[0]}</strong> dominates at <strong>${topProj[1].total} hires</strong> (${d.pct(topProj[1].total,d.total)}% of intake). Top location is <strong>${topLoc?topLoc[0]:'—'}</strong> with ${topLoc?topLoc[1].total:'—'} hires. ${isSlow?`${topProj[0]} avg TAT of ${topProjTat}d is above org average — concentrated volume plus slow TAT signals a bottleneck.`:'Volume and speed are distributed without a clear single bottleneck.'}`;
+    if(geoV){ geoV.innerHTML=isSlow?'⚠ Bottleneck':'Distributed'; geoV.className='so-what-verdict '+(isSlow?'verdict-warn':'verdict-ok'); }
+  }
+}
+
+/* ═══ KPI CARDS ═════════════════════════════════════════════ */
+function renderKPIs(d){
+  const kpis=[
+    {l:'Total Hires',  v:d.total,                       tag:'FY 2025–26',               kc:'#00205C',ktbg:'#ECF2FF',ktc:'#00205C'},
+    {l:'New Hires',    v:d.newH,                        tag:`${d.repl} replacements`,   kc:'#007A4D',ktbg:'#E4F6EE',ktc:'#005A38'},
+    {l:'Onroll',       v:d.onroll,                      tag:`${d.pct(d.onroll,d.total)}% of total`,kc:'#005A9E',ktbg:'#E8F2FF',ktc:'#004080'},
+    {l:'Female Hires', v:d.pct(d.female,d.total),       tag:`${d.female} of ${d.total}`,kc:'#6040A0',ktbg:'#F2EEF9',ktc:'#402080',sup:'%'},
+    {l:'Projects',     v:d.uniqProj,                    tag:`${d.uniqLoc} locations`,   kc:'#005A9E',ktbg:'#E0F0FC',ktc:'#004080'},
+  ];
+  document.getElementById('kpiRow').innerHTML=kpis.map((k,i)=>`
+    <div class="kpi" style="--kc:${k.kc};animation-delay:${i*0.045}s">
+      <div class="kl">${k.l}</div>
+      <div class="kv">${k.v}${k.sup?`<sup>${k.sup}</sup>`:''}</div>
+      <span class="kt" style="background:${k.ktbg};color:${k.ktc}">${k.tag}</span>
+    </div>`).join('');
+}
+
+/* ═══ MONTHLY CHART ═════════════════════════════════════════ */
+function renderMonthly(d){
+  dc('monthlyChart');
+  const lbls = d.months.map(fmtMo);
+  document.getElementById('monthlyLeg').innerHTML=[['Cyber',DIV_COLOR.Cyber],['Physical',DIV_COLOR.Physical],['Common',DIV_COLOR.Common]]
+    .map(([l,c])=>`<div class="li"><div class="ld" style="background:${c}"></div>${l}</div>`).join('');
+  CHS['monthlyChart']=new Chart(ctx('monthlyChart'),{
+    type:'bar',
+    data:{labels:lbls,datasets:[
+      {label:'Cyber',  data:d.months.map(k=>d.monthly[k]?.Cyber||0),  backgroundColor:DIV_COLOR.Cyber+'BB',  borderColor:DIV_COLOR.Cyber,  borderWidth:1.5,borderRadius:4,stack:'s'},
+      {label:'Physical',data:d.months.map(k=>d.monthly[k]?.Physical||0),backgroundColor:DIV_COLOR.Physical+'BB',borderColor:DIV_COLOR.Physical,borderWidth:1.5,borderRadius:4,stack:'s'},
+      {label:'Common', data:d.months.map(k=>d.monthly[k]?.Common||0),  backgroundColor:DIV_COLOR.Common+'BB',  borderColor:DIV_COLOR.Common,  borderWidth:1.5,borderRadius:4,stack:'s'},
+    ]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{...AX_X,stacked:true},y:{...AX_Y,stacked:true}}}
+  });
+}
+
+/* ═══ DONUT ═════════════════════════════════════════════════ */
+function renderDonut(cid,lid,centerId,vals,lbls,clrs){
+  dc(cid);
+  const tot = vals.reduce((s,v)=>s+v,0);
+  CHS[cid]=new Chart(ctx(cid),{
+    type:'doughnut',
+    data:{labels:lbls,datasets:[{data:vals,backgroundColor:clrs.map(c=>c+'CC'),borderColor:clrs,borderWidth:2,hoverOffset:6}]},
+    options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw} (${Math.round(c.raw/tot*100)}%)`}}}}
+  });
+  const el=document.getElementById(centerId); if(el) el.textContent=tot;
+  document.getElementById(lid).innerHTML=lbls.map((l,i)=>`
+    <li>
+      <span class="dll"><span class="dld" style="background:${clrs[i]}"></span>${l}</span>
+      <span><span class="dlv">${vals[i]}</span><span class="dlp">${Math.round(vals[i]/tot*100)}%</span></span>
+    </li>`).join('');
+}
+
+/* ═══ SOURCE & GRADE LISTS ══════════════════════════════════ */
+function renderSourceList(d){
+  const entries=SRC_ORDER.filter(s=>d.srcCount[s]).map(s=>[s,d.srcCount[s]]);
+  Object.keys(d.srcCount).filter(s=>!SRC_ORDER.includes(s)).forEach(s=>entries.push([s,d.srcCount[s]]));
+  entries.sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(...entries.map(e=>e[1]));
+  document.getElementById('sourceList').innerHTML=entries.map(([s,n])=>`
+    <li class="bli">
+      <div class="bln">${s}</div>
+      <div class="blt"><div class="blf" style="width:${n/mx*100}%;background:${SRC_COLOR[s]||'#7A8FAA'}"></div></div>
+      <div class="blv">${n} <span style="color:var(--t3);font-size:9.5px">${d.pct(n,d.total)}%</span></div>
+    </li>`).join('');
+}
+function renderGradeList(d){
+  const entries=[...GRADE_ORDER,'Unknown'].filter(g=>d.gradeMap[g]).map(g=>[g,d.gradeMap[g]]);
+  const mx=Math.max(...entries.map(e=>e[1]));
+  document.getElementById('gradeList').innerHTML=entries.map(([g,n])=>`
+    <li class="bli">
+      <div class="bln">${g}</div>
+      <div class="blt"><div class="blf" style="width:${n/mx*100}%;background:var(--navy)"></div></div>
+      <div class="blv">${n}</div>
+    </li>`).join('');
+}
+
+/* ═══ TAT ═══════════════════════════════════════════════════ */
+function renderTATStats(d){
+  document.getElementById('tatStats').innerHTML=[
+    {v:`${d.f1(d.avgOffer)}d`,  l:'Avg Offer TAT',  c:'#005A9E'},
+    {v:`${d.f1(d.avgTotal)}d`,  l:'Avg Total TAT',  c:'#C84800'},
+    {v:`${d.f1(d.avgJoin||0)}d`,l:'Avg Offer→Join', c:'#B85C00'},
+  ].map(s=>`<div class="smi"><div class="smv" style="color:${s.c}">${s.v}</div><div class="sml">${s.l}</div></div>`).join('');
+}
+function renderTATBandChart(d){
+  dc('tatBandChart');
+  const lbls=['≤30 Days','31–45 Days','46–90 Days','>90 Days'];
+  const vals=lbls.map(l=>d.bands[l]||0);
+  const clrs=['#007A4D','#005A9E','#B85C00','#C8102E'];
+  CHS['tatBandChart']=new Chart(ctx('tatBandChart'),{
+    type:'bar',
+    data:{labels:lbls,datasets:[{data:vals,backgroundColor:clrs.map(c=>c+'BB'),borderColor:clrs,borderWidth:1.5,borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>`${c.raw} hires (${d.pct(c.raw,d.total)}%)`}}},
+      scales:{x:{...AX_X},y:{...AX_Y}}}
+  });
+}
+function renderTATBandsGrid(d){
+  document.getElementById('tatBandsGrid').innerHTML=[
+    {v:d.bands['≤30 Days']||0,  l:'≤ 30 Days', c:'#007A4D'},
+    {v:d.bands['31–45 Days']||0,l:'31–45 Days',c:'#005A9E'},
+    {v:d.bands['46–90 Days']||0,l:'46–90 Days',c:'#B85C00'},
+    {v:d.bands['>90 Days']||0,  l:'> 90 Days', c:'#C8102E'},
+  ].map(b=>`<div class="tband"><div class="tbv" style="color:${b.c}">${b.v}</div><div class="tbl">${b.l}</div></div>`).join('');
+  const nd=d.bands['No Data']||0;
+  document.getElementById('tatAlert').innerHTML=
+    `<strong>TAT Coverage</strong>${d.pct(d.bands['≤30 Days']||0,d.total)}% within 30 days. ${d.pct(d.bands['>90 Days']||0,d.total)}% exceed 90 days. `+
+    (nd?`${nd} record${nd>1?'s':''} missing TAT data.`:'All records have complete TAT data.');
+}
+function renderTATMonthly(d){
+  dc('tatMonthlyChart');
+  const lbls=d.months.map(fmtMo);
+  const tats=d.months.map(k=>{const m=d.monthly[k];return m?.tatN?+(m.tatS/m.tatN).toFixed(1):null;});
+  CHS['tatMonthlyChart']=new Chart(ctx('tatMonthlyChart'),{
+    type:'line',
+    data:{labels:lbls,datasets:[{
+      label:'Avg Offer TAT (days)',data:tats,
+      borderColor:'#005A9E',backgroundColor:'rgba(0,90,158,0.07)',
+      pointBackgroundColor:'#005A9E',pointRadius:6,pointHoverRadius:9,
+      pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,fill:true,spanGaps:true
+    }]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{...AX_X},y:{...AX_Y,title:{display:true,text:'Days',color:'#7A8FAA',font:{size:10}}}}}
+  });
+}
+function renderTATDiv(d){
+  dc('tatDivChart');
+  const entries=Object.entries(d.divTat).filter(([,v])=>v.n>0);
+  const lbls=entries.map(([k])=>k), vals=entries.map(([,v])=>+(v.s/v.n).toFixed(1));
+  const clrs=lbls.map(l=>DIV_COLOR[l]||'#7A8FAA');
+  CHS['tatDivChart']=new Chart(ctx('tatDivChart'),{
+    type:'bar',
+    data:{labels:lbls,datasets:[{data:vals,backgroundColor:clrs.map(c=>c+'BB'),borderColor:clrs,borderWidth:1.5,borderRadius:6}]},
+    options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>`Avg TAT: ${c.raw} days`}}},
+      scales:{x:{...AX_X,beginAtZero:true},y:{grid:{display:false},ticks:{color:'#334E6B'}}}}
+  });
+}
+
+/* ═══ SOURCE CHARTS ═════════════════════════════════════════ */
+function renderSrcVolume(d){
+  dc('sourceVolumeChart');
+  const srcs=SRC_ORDER.filter(s=>d.srcCount[s]);
+  const counts=srcs.map(s=>d.srcCount[s]);
+  const tats=srcs.map(s=>d.srcAvgTat[s]?+d.srcAvgTat[s].toFixed(1):null);
+  const clrs=srcs.map(s=>SRC_COLOR[s]||'#7A8FAA');
+  CHS['sourceVolumeChart']=new Chart(ctx('sourceVolumeChart'),{
+    type:'bar',
+    data:{labels:srcs,datasets:[
+      {label:'Hires ▮',data:counts,backgroundColor:clrs.map(c=>c+'BB'),borderColor:clrs,borderWidth:1.5,borderRadius:5,yAxisID:'y'},
+      {label:'Avg Offer TAT ●',data:tats,type:'line',borderColor:'#B85C00',backgroundColor:'rgba(184,92,0,0.05)',
+       pointBackgroundColor:'#B85C00',pointRadius:6,pointHoverRadius:9,pointBorderColor:'#fff',pointBorderWidth:2,tension:0.32,yAxisID:'y1',spanGaps:true},
+    ]},
+    options:{responsive:true,plugins:{legend:LEG_DUAL},
+      scales:{
+        y:{...AX_Y,title:{display:true,text:'Hires',color:'#7A8FAA',font:{size:10}}},
+        y1:{position:'right',grid:{display:false},ticks:{color:'#7A8FAA',font:{size:10}},beginAtZero:true,title:{display:true,text:'Avg TAT (days)',color:'#7A8FAA',font:{size:10}}},
+        x:{...AX_X}
+      }}
+  });
+}
+function renderSrcDivDonuts(d){
+  const pb = d.portalBreak||{Cyber:{LinkedIn:0,Naukri:0,Other:0},Physical:{LinkedIn:0,Naukri:0,Other:0},Common:{LinkedIn:0,Naukri:0,Other:0}};
+  // Color palette including LinkedIn/Naukri sub-sources
+  const SRC_EXT = {
+    'LinkedIn':'#0A66C2','Naukri':'#FF6722','Job Portal (Other)':'#4A90D9',
+    'Consultant':'#6040A0','Referral':'#007A4D','Internal':'#B85C00',
+    'Referral + Internal':'#007A4D','Campus':'#C8102E','BYB':'#008099','Other':'#7A8FAA'
+  };
+
+  // ── CYBER: split Job Portal into LinkedIn / Naukri / Other ──
+  dc('srcCyberChart');
+  const cyberEntries=[];
+  SRC_ORDER.forEach(s=>{
+    if(s==='Job Portal'){
+      if(pb.Cyber.LinkedIn) cyberEntries.push(['LinkedIn',pb.Cyber.LinkedIn]);
+      if(pb.Cyber.Naukri)   cyberEntries.push(['Naukri',pb.Cyber.Naukri]);
+      if(pb.Cyber.Other)    cyberEntries.push(['Job Portal (Other)',pb.Cyber.Other]);
+    } else {
+      const n=d.srcDiv[s]?.Cyber||0; if(n) cyberEntries.push([s,n]);
+    }
+  });
+  const cyTot=cyberEntries.reduce((s,e)=>s+e[1],0);
+  if(cyTot){
+    CHS['srcCyberChart']=new Chart(ctx('srcCyberChart'),{
+      type:'doughnut',
+      data:{labels:cyberEntries.map(e=>e[0]),datasets:[{data:cyberEntries.map(e=>e[1]),
+        backgroundColor:cyberEntries.map(e=>(SRC_EXT[e[0]]||'#7A8FAA')+'CC'),borderWidth:1.5}]},
+      options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw+' ('+Math.round(c.raw/cyTot*100)+'%)'}}}}
+    });
+    const cen1=document.getElementById('scCenter'); if(cen1) cen1.textContent=cyTot;
+    document.getElementById('srcCyberLeg').innerHTML=cyberEntries.map(([s,n])=>
+      '<li><span class="dll"><span class="dld" style="background:'+(SRC_EXT[s]||'#7A8FAA')+'"></span>'+s+'</span>'+
+      '<span><span class="dlv">'+n+'</span><span class="dlp">'+Math.round(n/cyTot*100)+'%</span></span></li>'
+    ).join('');
+  }
+
+  // ── PHYSICAL: split JP + merge Referral+Internal ──
+  dc('srcPhysChart');
+  const physEntries=[];
+  const mergedRI=(d.srcDiv['Referral']?.Physical||0)+(d.srcDiv['Internal']?.Physical||0);
+  SRC_ORDER.forEach(s=>{
+    if(s==='Internal') return; // merged into Referral
+    if(s==='Job Portal'){
+      if(pb.Physical.LinkedIn) physEntries.push(['LinkedIn',pb.Physical.LinkedIn]);
+      if(pb.Physical.Naukri)   physEntries.push(['Naukri',pb.Physical.Naukri]);
+      if(pb.Physical.Other)    physEntries.push(['Job Portal (Other)',pb.Physical.Other]);
+    } else if(s==='Referral'){
+      if(mergedRI) physEntries.push(['Referral + Internal',mergedRI]);
+    } else {
+      const n=d.srcDiv[s]?.Physical||0; if(n) physEntries.push([s,n]);
+    }
+  });
+  const phTot=physEntries.reduce((s,e)=>s+e[1],0);
+  if(phTot){
+    CHS['srcPhysChart']=new Chart(ctx('srcPhysChart'),{
+      type:'doughnut',
+      data:{labels:physEntries.map(e=>e[0]),datasets:[{data:physEntries.map(e=>e[1]),
+        backgroundColor:physEntries.map(e=>(SRC_EXT[e[0]]||'#7A8FAA')+'CC'),borderWidth:1.5}]},
+      options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw+' ('+Math.round(c.raw/phTot*100)+'%)'}}}}
+    });
+    const cen2=document.getElementById('spCenter'); if(cen2) cen2.textContent=phTot;
+    document.getElementById('srcPhysLeg').innerHTML=physEntries.map(([s,n])=>
+      '<li><span class="dll"><span class="dld" style="background:'+(SRC_EXT[s]||'#7A8FAA')+'"></span>'+s+'</span>'+
+      '<span><span class="dlv">'+n+'</span><span class="dlp">'+Math.round(n/phTot*100)+'%</span></span></li>'
+    ).join('');
+  }
+}
+
+function renderSrcDivTable(d){
+  const srcs=SRC_ORDER.filter(s=>d.srcCount[s]);
+  const DIVS=['Cyber','Physical','Common'];
+  let tot={C:0,P:0,Co:0,N:0,R:0,T:0};
+  const maxSrc=Math.max(...srcs.map(s=>d.srcCount[s]));
+  const rowsH=srcs.map(s=>{
+    const dc2=DIVS.map(dv=>d.srcDiv[s]?.[dv]||0);
+    const nh=d.srcHT[s]?.New||0, rh=d.srcHT[s]?.Replacement||0, tot2=d.srcCount[s];
+    dc2.forEach((n,i)=>{ if(i===0)tot.C+=n; else if(i===1)tot.P+=n; else tot.Co+=n; });
+    tot.N+=nh; tot.R+=rh; tot.T+=tot2;
+    const sc=SRC_COLOR[s]||'#7A8FAA';
+    const avgT=d.srcAvgTat[s]?+(d.srcAvgTat[s]).toFixed(1)+'d':'—';
+    const tatAbove=d.srcAvgTat[s]&&d.srcAvgTat[s]>d.avgOffer;
+    const minSrc=Math.min(...srcs.map(s=>d.srcCount[s]));
+    const totalCls=tot2===maxSrc?'cell-hot':tot2===minSrc?'cell-cool':'';
+    const rowCls='';
+    const cells=dc2.map(n=>{
+      if(!n) return`<td style="color:var(--t3)">—</td>`;
+      const op=Math.min(0.55,n/20);
+      const bg=sc+Math.round(op*255).toString(16).padStart(2,'0');
+      return`<td><span style="display:inline-block;min-width:24px;padding:2px 7px;border-radius:3px;background:${bg};font-weight:500">${n}</span></td>`;
+    });
+    return`<tr>
+      <td><span style="display:inline-flex;align-items:center;gap:8px">
+        <span style="width:8px;height:8px;border-radius:2px;background:${sc};display:inline-block;flex-shrink:0"></span>${s}
+      </span></td>
+      ${cells.join('')}<td>${nh||'—'}</td><td>${rh||'—'}</td>
+      <td class="${totalCls}" style="font-weight:700">${tot2}</td>
+      <td class="${d.srcAvgTat[s]>d.avgOffer*1.3?'cell-hot':d.srcAvgTat[s]>d.avgOffer?'cell-warm':d.srcAvgTat[s]&&d.srcAvgTat[s]<d.avgOffer*0.7?'cell-cool':''}" style="font-family:var(--fm)">${avgT}</td>
+    </tr>`;
+  });
+  document.getElementById('srcDivTable').innerHTML=
+    `<thead><tr><th>Source Channel</th>${DIVS.map(dv=>`<th>${dv}</th>`).join('')}<th>New</th><th>Replacement</th><th>Total</th><th>Avg Offer TAT</th></tr></thead>
+    <tbody>${rowsH.join('')}</tbody>
+    <tfoot><tr><td>TOTAL</td><td>${tot.C}</td><td>${tot.P}</td><td>${tot.Co||0}</td><td>${tot.N}</td><td>${tot.R}</td><td>${tot.T}</td><td>—</td></tr></tfoot>`;
+}
+
+/* ═══ DIVERSITY ═════════════════════════════════════════════ */
+function renderGenderStats(d){
+  const onF =d.rows.filter(r=>r._roll==='Onroll' &&r._gen==='Female').length;
+  const offF=d.rows.filter(r=>r._roll==='Offroll'&&r._gen==='Female').length;
+  const cyF =d.rows.filter(r=>r._div==='Cyber'   &&r._gen==='Female').length;
+  const phF =d.rows.filter(r=>r._div==='Physical' &&r._gen==='Female').length;
+  document.getElementById('genderStats').innerHTML=[
+    {v:`${d.female}/${d.total}`,          l:'Female Hires',    c:'#6040A0'},
+    {v:`${d.pct(d.female,d.total)}%`,     l:'Overall Diversity',c:'#6040A0'},
+    {v:`${d.pct(onF,d.onroll)}%`,         l:'Onroll Diversity', c:'#005A9E'},
+    {v:`${d.pct(offF,d.offroll)}%`,        l:'Offroll Diversity',c:'#C84800'},
+    {v:`${d.pct(cyF,d.cyber)}%`,          l:'Cyber',            c:'#005A9E'},
+    {v:`${d.pct(phF,d.physical)}%`,       l:'Physical',         c:'#C84800'},
+  ].map(s=>`<div class="smi"><div class="smv" style="color:${s.c}">${s.v}</div><div class="sml">${s.l}</div></div>`).join('');
+}
+function renderGenderDivChart(d){
+  dc('genderDivChart');
+  const onR=d.rows.filter(r=>r._roll==='Onroll');
+  const DIVS=['Cyber','Physical','Common'];
+  CHS['genderDivChart']=new Chart(ctx('genderDivChart'),{
+    type:'bar',
+    data:{labels:DIVS,datasets:[
+      {label:'Male',  data:DIVS.map(dv=>onR.filter(r=>r._div===dv&&r._gen==='Male').length),  backgroundColor:'#005A9EBB',borderColor:'#005A9E',borderWidth:1.5,borderRadius:5},
+      {label:'Female',data:DIVS.map(dv=>onR.filter(r=>r._div===dv&&r._gen==='Female').length),backgroundColor:'#6040A0BB',borderColor:'#6040A0',borderWidth:1.5,borderRadius:5},
+    ]},
+    options:{responsive:true,plugins:{legend:LEG},scales:{x:{...AX_X},y:{...AX_Y}}}
+  });
+}
+function renderGenderHireChart(d){
+  dc('genderHireChart');
+  CHS['genderHireChart']=new Chart(ctx('genderHireChart'),{
+    type:'bar',
+    data:{labels:['New Hire','Replacement'],datasets:[
+      {label:'Male',  data:[d.genHT.New.M,d.genHT.Replacement.M],backgroundColor:'#005A9EBB',borderColor:'#005A9E',borderWidth:1.5,borderRadius:5},
+      {label:'Female',data:[d.genHT.New.F,d.genHT.Replacement.F],backgroundColor:'#6040A0BB',borderColor:'#6040A0',borderWidth:1.5,borderRadius:5},
+    ]},
+    options:{responsive:true,plugins:{legend:LEG},scales:{x:{...AX_X},y:{...AX_Y}}}
+  });
+}
+function renderDiversityInfographic(d){
+  const container = document.getElementById('diversityInfographic');
+  if(!container) return;
+  const grades = GRADE_ORDER.filter(g => Object.keys(d.divData).some(k => k.startsWith(g+'__')));
+
+  /* ── Colour / badge helpers ─────────────────────────────── */
+  function cellBg(fpct, tot){
+    if(!tot||fpct===null||fpct===undefined) return 'transparent';
+    if(fpct===0) return 'rgba(200,16,46,0.09)';
+    const o = Math.min(0.82, 0.07 + (fpct/100)*0.75);
+    return `rgba(96,64,160,${o.toFixed(2)})`;
+  }
+  function cellTxt(fpct, tot){
+    if(!tot||fpct===null||fpct===undefined) return '#B8C4D8';
+    if(fpct===0) return '#C8102E';
+    return fpct>40?'#fff':fpct>22?'#3a1870':'#6040A0';
+  }
+  function getBadge(fpct, tot){
+    if(!tot||fpct===null||fpct===undefined) return ['—','#B8C4D8','transparent'];
+    if(fpct===0)  return ['Zero F', '#C8102E','rgba(200,16,46,0.10)'];
+    if(fpct<10)   return ['Low',    '#B85C00','rgba(184,92,0,0.10)'];
+    if(fpct<20)   return ['Moderate','#B85C00','rgba(184,92,0,0.08)'];
+    if(fpct<30)   return ['Fair',   '#005A9E','rgba(0,90,158,0.10)'];
+    return ['Strong','#007A4D','rgba(0,122,77,0.10)'];
+  }
+
+  /* ── Build grade data ───────────────────────────────────── */
+  const gradeRows = grades.map(g=>{
+    const cy=d.divData[`${g}__Cyber`]||{M:0,F:0};
+    const ph=d.divData[`${g}__Physical`]||{M:0,F:0};
+    const co=d.divData[`${g}__Common`]||{M:0,F:0};
+    const tM=cy.M+ph.M+co.M, tF=cy.F+ph.F+co.F, tot=tM+tF;
+    const fpct=tot?Math.round(tF/tot*100):null;
+    return {
+      g, tM, tF, tot, fpct, isZeroF:tot>0&&tF===0,
+      cells:[
+        {div:'Cyber',   M:cy.M,F:cy.F,tot:cy.M+cy.F,fpct:cy.M+cy.F?Math.round(cy.F/(cy.M+cy.F)*100):null},
+        {div:'Physical',M:ph.M,F:ph.F,tot:ph.M+ph.F,fpct:ph.M+ph.F?Math.round(ph.F/(ph.M+ph.F)*100):null},
+        {div:'Common',  M:co.M,F:co.F,tot:co.M+co.F,fpct:co.M+co.F?Math.round(co.F/(co.M+co.F)*100):null},
+      ]
+    };
+  });
+
+  /* ── Column totals ──────────────────────────────────────── */
+  const divTotals=['Cyber','Physical','Common'].map((div,i)=>{
+    const tM=gradeRows.reduce((s,r)=>s+r.cells[i].M,0);
+    const tF=gradeRows.reduce((s,r)=>s+r.cells[i].F,0);
+    const tot=tM+tF;
+    return {div,tM,tF,tot,fpct:tot?Math.round(tF/tot*100):null};
+  });
+  const gTotM=gradeRows.reduce((s,r)=>s+r.tM,0);
+  const gTotF=gradeRows.reduce((s,r)=>s+r.tF,0);
+  const gTot=gTotM+gTotF;
+  const gFpct=gTot?Math.round(gTotF/gTot*100):null;
+
+  /* ── Mutable state ──────────────────────────────────────── */
+  let activeFilter='all', sortMode='rank', expandedGrade=null;
+
+  function filteredRows(){
+    let rows=[...gradeRows];
+    if(activeFilter==='zero') rows=rows.filter(r=>r.isZeroF);
+    else if(activeFilter==='low')  rows=rows.filter(r=>r.tot>0&&r.fpct!==null&&r.fpct<15);
+    else if(activeFilter==='mod')  rows=rows.filter(r=>r.tot>0&&r.fpct!==null&&r.fpct>=15&&r.fpct<30);
+    else if(activeFilter==='str')  rows=rows.filter(r=>r.tot>0&&r.fpct!==null&&r.fpct>=30);
+    if(sortMode==='fasc')  rows.sort((a,b)=>(a.fpct??-1)-(b.fpct??-1));
+    if(sortMode==='fdesc') rows.sort((a,b)=>(b.fpct??-1)-(a.fpct??-1));
+    if(sortMode==='hd')    rows.sort((a,b)=>b.tot-a.tot);
+    return rows;
+  }
+
+  /* ── Main render ────────────────────────────────────────── */
+  function render(){
+    const rows=filteredRows();
+
+    /* Toolbar */
+    const fcfg=[['all','All Grades'],['zero','⚠ Zero Female'],['low','Below 15%'],['mod','15–30%'],['str','Above 30%']];
+    const scfg=[['rank','Grade Rank'],['fasc','% ↑'],['fdesc','% ↓'],['hd','Headcount']];
+    const toolbar=`<div class="dmi-toolbar">
+      <div class="dmi-filters">${fcfg.map(([k,l])=>`<button class="dmi-pill${activeFilter===k?' on':''}" onclick="divHM_filter('${k}')">${l}</button>`).join('')}</div>
+      <div class="dmi-sort"><span class="dmi-sort-lbl">Sort:</span>${scfg.map(([k,l])=>`<button class="dmi-pill${sortMode===k?' on':''}" onclick="divHM_sort('${k}')">${l}</button>`).join('')}</div>
+    </div>`;
+
+    /* Header */
+    const header=`<div class="dmi-header">
+      <div class="dmi-hcell">Grade</div>
+      <div class="dmi-hcell" style="color:#7EC0EE">Cyber</div>
+      <div class="dmi-hcell" style="color:#F0A87A">Physical</div>
+      <div class="dmi-hcell" style="color:#B8A0E0">Common</div>
+      <div class="dmi-hcell dmi-total-head">All Divs</div>
+      <div class="dmi-hcell">Female Share ▸</div>
+    </div>`;
+
+    /* Grade rows */
+    const body=rows.map(r=>{
+      const isExp=expandedGrade===r.g;
+      const [bl,bc,bb]=getBadge(r.fpct,r.tot);
+
+      /* 3 division cells */
+      const divCells=r.cells.map(c=>{
+        const bg=cellBg(c.fpct,c.tot), tc=cellTxt(c.fpct,c.tot);
+        const zf=c.tot>0&&c.F===0;
+        return `<div class="dmi-cell${zf?' zero-f':''}" style="background:${bg}"
+          data-grade="${r.g}" data-div="${c.div}" data-m="${c.M}" data-f="${c.F}" data-tot="${c.tot}" data-fpct="${c.fpct??''}"
+          onmouseenter="divHM_tip(event,this)" onmouseleave="divHM_tipHide()" onclick="event.stopPropagation()">
+          ${c.tot>0
+            ?`<div class="dmi-cell-pct" style="color:${tc}">${c.fpct}%</div><div class="dmi-cell-mf" style="color:${tc==='#fff'?'rgba(255,255,255,0.62)':'var(--t3)'}">${c.M}M&nbsp;${c.F}F</div>`
+            :`<div class="dmi-cell-empty">—</div>`}
+        </div>`;
+      }).join('');
+
+      /* Total cell */
+      const ttBg=cellBg(r.fpct,r.tot), ttTc=cellTxt(r.fpct,r.tot);
+      const totalCell=`<div class="dmi-cell dmi-total-cell" style="background:${ttBg}"
+        data-grade="${r.g}" data-div="All" data-m="${r.tM}" data-f="${r.tF}" data-tot="${r.tot}" data-fpct="${r.fpct??''}"
+        onmouseenter="divHM_tip(event,this)" onmouseleave="divHM_tipHide()" onclick="event.stopPropagation()">
+        ${r.tot>0
+          ?`<div class="dmi-cell-pct" style="color:${ttTc}">${r.fpct}%</div><div class="dmi-cell-mf" style="color:${ttTc==='#fff'?'rgba(255,255,255,0.62)':'var(--t3)'}">${r.tot}&nbsp;onroll</div>`
+          :`<div class="dmi-cell-empty">—</div>`}
+      </div>`;
+
+      /* Bar cell */
+      const barW=r.fpct!==null&&r.tot>0?r.fpct:0;
+      const barClr=r.isZeroF?'#C8102E':r.fpct>30?'#007A4D':r.fpct>15?'#005A9E':'#6040A0';
+      const barCell=`<div class="dmi-bar-cell">
+        <div class="dmi-bar-track"><div class="dmi-bar-fill" style="width:${barW}%;background:${barClr}"></div></div>
+        <span class="dmi-bar-lbl" style="color:${barClr}">${r.tot>0?r.fpct+'%':'—'}</span>
+      </div>`;
+
+      /* Expanded detail strip */
+      const gSafe=r.g.replace(/[\s./]/g,'-');
+      const detail=isExp?`<div class="dmi-detail-row" id="dmi-det-${gSafe}">
+        <div class="dmi-detail-inner">
+          <div class="dmi-detail-title">↳ ${r.g} — Division Breakdown (Onroll)</div>
+          <div class="dmi-detail-grid">
+            ${r.cells.filter(c=>c.tot>0).map(c=>{
+              const [bl2,bc2,bb2]=getBadge(c.fpct,c.tot);
+              const dc=c.div==='Cyber'?'#005A9E':c.div==='Physical'?'#C84800':'#6040A0';
+              const mW=c.tot?Math.round(c.M/c.tot*100):0, fW=c.tot?Math.round(c.F/c.tot*100):0;
+              return `<div class="dmi-detail-card" style="border-top:3px solid ${dc}">
+                <div class="dmi-detail-div" style="color:${dc}">${c.div}</div>
+                <div class="dmi-detail-total">${c.tot} onroll</div>
+                <div class="dmi-detail-bar-row">
+                  <span class="dmi-detail-gender-lbl" style="color:#005A9E">M</span>
+                  <div class="dmi-detail-track"><div class="dmi-detail-fill" style="width:${mW}%;background:#005A9EBB"></div></div>
+                  <span class="dmi-detail-cnt" style="color:#005A9E">${c.M}</span>
+                </div>
+                <div class="dmi-detail-bar-row">
+                  <span class="dmi-detail-gender-lbl" style="color:${c.F===0?'#C8102E':'#6040A0'}">F</span>
+                  <div class="dmi-detail-track"><div class="dmi-detail-fill" style="width:${fW}%;background:${c.F===0?'#C8102E':'#6040A0'}BB"></div></div>
+                  <span class="dmi-detail-cnt" style="color:${c.F===0?'#C8102E':'#6040A0'}">${c.F}</span>
+                </div>
+                <div class="dmi-detail-pct" style="color:${bc2}">
+                  ${c.fpct!==null?c.fpct+'%':'—'}
+                  <span class="dmi-detail-badge" style="background:${bb2};color:${bc2}">${bl2}</span>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="dmi-detail-close" onclick="event.stopPropagation();divHM_expand('${r.g}')">▲ Collapse ${r.g}</div>
+        </div>
+      </div>`:'';
+
+      return `<div class="dmi-row${isExp?' expanded':''}" onclick="divHM_expand('${r.g}')">
+        <div class="dmi-grade-cell">
+          <span class="dmi-grade-name">${r.g}</span>
+          <span class="dmi-grade-badge" style="background:${bb};color:${bc}">${bl}</span>
+        </div>
+        ${divCells}${totalCell}${barCell}
+      </div>${detail}`;
+    }).join('');
+
+    /* Footer totals */
+    const footCells=divTotals.map(dt=>{
+      const bg=cellBg(dt.fpct,dt.tot), tc=cellTxt(dt.fpct,dt.tot);
+      return `<div class="dmi-cell dmi-footer-cell" style="background:${bg}">
+        ${dt.tot>0
+          ?`<div class="dmi-cell-pct" style="color:${tc}">${dt.fpct}%</div><div class="dmi-cell-mf" style="color:${tc==='#fff'?'rgba(255,255,255,0.62)':'var(--t3)'}">${dt.tM}M&nbsp;${dt.tF}F</div>`
+          :`<div class="dmi-cell-empty">—</div>`}
+      </div>`;
+    }).join('');
+    const gBg=cellBg(gFpct,gTot), gTc=cellTxt(gFpct,gTot);
+    const footer=`<div class="dmi-footer">
+      <div class="dmi-footer-label">All Grades</div>
+      ${footCells}
+      <div class="dmi-cell dmi-footer-cell dmi-total-cell" style="background:${gBg}">
+        ${gTot>0?`<div class="dmi-cell-pct" style="color:${gTc}">${gFpct}%</div><div class="dmi-cell-mf" style="color:${gTc==='#fff'?'rgba(255,255,255,0.62)':'var(--t3)'}">${gTot}&nbsp;onroll</div>`:`<div class="dmi-cell-empty">—</div>`}
+      </div>
+      <div class="dmi-bar-cell"><span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px">Overall</span></div>
+    </div>`;
+
+    /* Legend */
+    const legend=`<div class="dmi-legend">
+      <div class="dmi-legend-item"><span class="dmi-legend-swatch" style="background:rgba(200,16,46,0.15);border-color:rgba(200,16,46,0.35)"></span>Zero Female</div>
+      <div class="dmi-legend-item"><span class="dmi-legend-swatch" style="background:rgba(96,64,160,0.10)"></span>&lt;15%</div>
+      <div class="dmi-legend-item"><span class="dmi-legend-swatch" style="background:rgba(96,64,160,0.28)"></span>15–30%</div>
+      <div class="dmi-legend-item"><span class="dmi-legend-swatch" style="background:rgba(96,64,160,0.55)"></span>30–50%</div>
+      <div class="dmi-legend-item"><span class="dmi-legend-swatch" style="background:rgba(96,64,160,0.82)"></span>&gt;50%</div>
+      <span style="margin-left:auto;font-size:10.5px;color:var(--t3)">Click any grade row to expand · Hover cell for detail</span>
+    </div>`;
+
+    container.innerHTML=`<div class="dmi-wrap">${toolbar}<div class="dmi-matrix">${header}<div class="dmi-body">${body}</div>${footer}</div>${legend}</div>`;
+  }
+
+  /* ── Global handlers ────────────────────────────────────── */
+  window.divHM_filter=f=>{activeFilter=f;render();};
+  window.divHM_sort  =s=>{sortMode=s;render();};
+  window.divHM_expand=g=>{expandedGrade=expandedGrade===g?null:g;render();};
+
+  /* ── Floating tooltip ───────────────────────────────────── */
+  let _tipEl=null;
+  window.divHM_tip=function(e,el){
+    if(!_tipEl){_tipEl=document.createElement('div');_tipEl.className='dmi-tooltip';document.body.appendChild(_tipEl);}
+    const {grade,div,m,f,tot,fpct}=el.dataset;
+    if(!tot||tot==='0'){_tipEl.style.display='none';return;}
+    const [bl,bc,bb]=getBadge(fpct!==''?+fpct:null,+tot);
+    _tipEl.innerHTML=`<div class="dmi-tip-hdr"><strong>${grade}</strong><span>${div}</span></div>
+      <div class="dmi-tip-row"><span>Male</span><strong>${m}</strong></div>
+      <div class="dmi-tip-row"><span>Female</span><strong style="color:${f==='0'?'#C8102E':'#6040A0'}">${f}</strong></div>
+      <div class="dmi-tip-row"><span>Total&nbsp;(Onroll)</span><strong>${tot}</strong></div>
+      <div class="dmi-tip-div"><span>Female&nbsp;%</span><strong style="color:${bc}">${fpct!==''?fpct+'%':'—'}</strong></div>
+      <div style="margin-top:8px"><span class="dmi-tip-badge" style="background:${bb};color:${bc}">${bl}</span></div>`;
+    _tipEl.style.display='block';
+    const rect=el.getBoundingClientRect();
+    _tipEl.style.top=(rect.bottom+window.scrollY+8)+'px';
+    _tipEl.style.left=Math.max(8,Math.min(rect.left+window.scrollX,window.innerWidth-194))+'px';
+  };
+  window.divHM_tipHide=()=>{if(_tipEl)_tipEl.style.display='none';};
+
+  render();
+}
+
+
+/* ═══ GEOGRAPHY ═════════════════════════════════════════════ */
+function buildGeoRankList(entries, div, colorHex){
+  if(!entries.length) return '<li style="color:var(--t3);font-size:12px;padding:8px 0">No data</li>';
+  const mx=Math.max(...entries.map(e=>e[1]));
+  return entries.map(([name,n],i)=>`
+    <li class="geo-rank-item">
+      <div class="geo-rank-num">${i+1}</div>
+      <div class="geo-rank-name" title="${name}">${name}</div>
+      <div class="geo-rank-bar-wrap">
+        <div class="geo-rank-bar"><div class="geo-rank-fill" style="width:${Math.round(n/mx*100)}%;background:${colorHex}BB"></div></div>
+      </div>
+      <div class="geo-rank-val">${n}</div>
+    </li>`).join('');
+}
+
+function renderGeoInfographics(d){
+  // Projects — per division (all, no truncation)
+  const projCyber=Object.entries(d.projMap).filter(([k,v])=>k!=='(Unspecified)'&&v.cyber>0)
+    .sort((a,b)=>b[1].cyber-a[1].cyber);
+  const projPhys=Object.entries(d.projMap).filter(([k,v])=>k!=='(Unspecified)'&&v.physical>0)
+    .sort((a,b)=>b[1].physical-a[1].physical);
+  const locCyber=Object.entries(d.locMap).filter(([k,v])=>k!=='(Unspecified)'&&v.cyber>0)
+    .sort((a,b)=>b[1].cyber-a[1].cyber);
+  const locPhys=Object.entries(d.locMap).filter(([k,v])=>k!=='(Unspecified)'&&v.physical>0)
+    .sort((a,b)=>b[1].physical-a[1].physical);
+
+  const cyProjTot=projCyber.reduce((s,e)=>s+e[1].cyber,0);
+  const phProjTot=projPhys.reduce((s,e)=>s+e[1].physical,0);
+  const cyLocTot=locCyber.reduce((s,e)=>s+e[1].cyber,0);
+  const phLocTot=locPhys.reduce((s,e)=>s+e[1].physical,0);
+
+  const el=id=>document.getElementById(id);
+  if(el('cyProjTotal')) el('cyProjTotal').textContent=cyProjTot;
+  if(el('cyProjSub'))   el('cyProjSub').textContent=`${projCyber.length} active projects`;
+  if(el('phProjTotal')) el('phProjTotal').textContent=phProjTot;
+  if(el('phProjSub'))   el('phProjSub').textContent=`${projPhys.length} active projects`;
+  if(el('cyLocTotal'))  el('cyLocTotal').textContent=cyLocTot;
+  if(el('cyLocSub'))    el('cyLocSub').textContent=`${locCyber.length} locations`;
+  if(el('phLocTotal'))  el('phLocTotal').textContent=phLocTot;
+  if(el('phLocSub'))    el('phLocSub').textContent=`${locPhys.length} locations`;
+
+  if(el('cyberProjectsList'))  el('cyberProjectsList').innerHTML=buildGeoRankList(projCyber.map(([k,v])=>[k,v.cyber]),'Cyber','#005A9E');
+  if(el('physProjectsList'))   el('physProjectsList').innerHTML=buildGeoRankList(projPhys.map(([k,v])=>[k,v.physical]),'Physical','#C84800');
+  if(el('cyberLocationsList')) el('cyberLocationsList').innerHTML=buildGeoRankList(locCyber.map(([k,v])=>[k,v.cyber]),'Cyber','#005A9E');
+  if(el('physLocationsList'))  el('physLocationsList').innerHTML=buildGeoRankList(locPhys.map(([k,v])=>[k,v.physical]),'Physical','#C84800');
+}
+
+// ── Interactive Leaflet Map (Change 4) ─────────────────────────
+let leafletMap=null;
+
+  const CITY_COORDS={
+    'Hyderabad':[17.385,78.487],'Bangalore':[12.971,77.594],'Bengaluru':[12.971,77.594],
+    'Mumbai':[19.076,72.877],'Delhi':[28.614,77.209],'New Delhi':[28.614,77.209],
+    'Chennai':[13.083,80.270],'Pune':[18.520,73.856],'Kolkata':[22.573,88.364],
+    'Ahmedabad':[23.023,72.572],'Gurgaon':[28.459,77.026],'Gurugram':[28.459,77.026],
+    'Noida':[28.535,77.391],'Bhopal':[23.259,77.412],'Lucknow':[26.847,80.947],
+    'Jaipur':[26.913,75.787],'Chandigarh':[30.734,76.779],'Nagpur':[21.145,79.088],
+    'Visakhapatnam':[17.688,83.218],'Vizag':[17.688,83.218],'Patna':[25.612,85.165],
+    'Bhubaneswar':[20.297,85.819],'Kochi':[9.931,76.267],'Thiruvananthapuram':[8.524,76.936],
+    'Coimbatore':[11.017,76.958],'Indore':[22.719,75.857],'Vadodara':[22.307,73.181],
+    'Surat':[21.195,72.830],'Ranchi':[23.343,85.309],'Dehradun':[30.317,78.032],
+    'Mangalore':[12.914,74.856],'Mysore':[12.297,76.639],'Mysuru':[12.297,76.639],
+    'Raipur':[21.251,81.634],'Vijayawada':[16.506,80.648],'Guwahati':[26.145,91.745],
+    'Jammu':[32.726,74.857],'Srinagar':[34.083,74.797],'Shimla':[31.104,77.173],
+    'Agra':[27.177,78.008],'Kanpur':[26.449,80.331],'Varanasi':[25.321,83.005],
+    'Jodhpur':[26.292,73.017],'Udaipur':[24.578,73.686],'Jamshedpur':[22.804,86.203],
+    'Aurangabad':[19.877,75.344],'Nashik':[20.011,73.789],'Rajkot':[22.302,70.803],
+    'Amritsar':[31.633,74.873],'Ludhiana':[30.901,75.857],'Faridabad':[28.408,77.313],
+    'Ghaziabad':[28.669,77.438],'Meerut':[28.984,77.706],'Rourkela':[22.256,84.853],
+    'Durgapur':[23.552,87.320],'Bhilai':[21.209,81.428],'Bokaro':[23.667,86.150],
+    'Haridwar':[29.945,78.163],'Roorkee':[29.865,77.893],'Bhuj':[23.255,69.666],
+    'Pondicherry':[11.936,79.831],'Puducherry':[11.936,79.831],'Gangtok':[27.333,88.617],
+    'Imphal':[24.820,93.950],'Shillong':[25.578,91.893],'Aizawl':[23.726,92.717],
+    'Dimapur':[25.916,93.716],'Agartala':[23.834,91.276],'Itanagar':[27.085,93.611],
+    'Port Blair':[11.623,92.726],'Leh':[34.165,77.584],'Panaji':[15.499,73.824],
+  };
+
+// ── Map state ────────────────────────────────────────────────
+let _mapData = null;          // stored d for panel rebuilds
+let _selectedMarker = null;   // currently highlighted marker
+let _allMarkers = [];         // [{locName, locData, coords, circle, clr, r}]
+const INDIA_CENTER = [22.5, 82.0];
+const INDIA_ZOOM   = 5;
+const ZOOM_IN      = 8;
+
+function renderLocationMap(d){
+  const mapDiv=document.getElementById('locationMap');
+  if(!mapDiv||typeof L==='undefined') return;
+  _mapData = d;
+  _allMarkers = [];
+  _selectedMarker = null;
+
+  if(leafletMap){ leafletMap.remove(); leafletMap=null; }
+
+  const indiaBounds = L.latLngBounds([6.5, 68.0], [37.5, 97.5]);
+  leafletMap = L.map('locationMap',{
+    center: INDIA_CENTER,
+    zoom:   INDIA_ZOOM,
+    zoomControl: true,
+    maxBounds: indiaBounds,
+    maxBoundsViscosity: 0.85,
+    minZoom: 4,
+    maxZoom: 12,
+    zoomSnap: 0.25,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains:'abcd', maxZoom:18
+  }).addTo(leafletMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{
+    attribution:'', subdomains:'abcd', maxZoom:18, pane:'shadowPane'
+  }).addTo(leafletMap);
+
+  // Defer size fix: map may init while tab is display:none — force recalc on next tick
+  setTimeout(()=>{
+    if(leafletMap){
+      leafletMap.invalidateSize({animate:false});
+      leafletMap.setView(INDIA_CENTER, INDIA_ZOOM, {animate:false});
+    }
+  }, 50);
+
+  // Build markers
+  Object.entries(d.locMap).forEach(([locName, locData])=>{
+    if(locName==='(Unspecified)'||!locData.total) return;
+    let coords=null;
+    const locLower = locName.toLowerCase().trim();
+    for(const [city,c] of Object.entries(CITY_COORDS)){
+      if(locLower === city.toLowerCase()){ coords=c; break; }
+    }
+    if(!coords){
+      for(const [city,c] of Object.entries(CITY_COORDS)){
+        if(locLower.startsWith(city.toLowerCase()) || city.toLowerCase().startsWith(locLower)){ coords=c; break; }
+      }
+    }
+    if(!coords){
+      for(const [city,c] of Object.entries(CITY_COORDS)){
+        if(locLower.includes(city.toLowerCase()) && city.length >= 4){ coords=c; break; }
+      }
+    }
+    if(!coords) return;
+
+    const cyberN = locData.cyber||0;
+    const physN  = locData.physical||0;
+    const both   = cyberN>0 && physN>0;
+    const clr    = both?'#6040A0': cyberN>0?'#005A9E':'#C84800';
+    const r      = Math.max(8, Math.min(28, 8+locData.total*1.2));
+
+    const circle = L.circleMarker(coords,{
+      radius: r, fillColor: clr, color:'#fff',
+      weight: 2.5, opacity: 1, fillOpacity: 0.75,
+      className: 'loc-marker'
+    }).addTo(leafletMap);
+
+    const entry = {locName, locData, coords, circle, clr, r, cyberN, physN};
+    _allMarkers.push(entry);
+
+    circle.on('click', ()=> mapSelectLocation(entry, d));
+
+    // Subtle hover feedback
+    circle.on('mouseover', function(){
+      if(_selectedMarker && _selectedMarker._locName === locName) return;
+      this.setStyle({fillOpacity:0.95, weight:3.5});
+    });
+    circle.on('mouseout', function(){
+      if(_selectedMarker && _selectedMarker._locName === locName) return;
+      this.setStyle({fillOpacity:0.75, weight:2.5});
+    });
+  });
+
+  // Detect manual zoom-out → reset panel
+  leafletMap.on('zoomend', ()=>{
+    if(leafletMap.getZoom() <= INDIA_ZOOM + 0.5 && _selectedMarker){
+      mapResetView(false); // false = don't fly (already zoomed)
+    }
+  });
+}
+
+/* ── Select a location: zoom in + open panel ── */
+function mapSelectLocation(entry, d){
+  // Deselect previous
+  if(_selectedMarker){
+    _selectedMarker.circle.setStyle({radius: _selectedMarker.r, weight:2.5, fillOpacity:0.75});
+    _selectedMarker.circle.getElement()?.classList.remove('marker-selected');
+  }
+
+  _selectedMarker = entry;
+
+  // Highlight selected marker
+  entry.circle.setStyle({radius: entry.r+3, weight:4, fillOpacity:1});
+  setTimeout(()=> entry.circle.getElement()?.classList.add('marker-selected'), 50);
+
+  // Smooth fly-to
+  leafletMap.flyTo(entry.coords, ZOOM_IN, {animate:true, duration:0.9, easeLinearity:0.25});
+
+  // Show back button
+  const backBtn = document.getElementById('mapBackBtn');
+  if(backBtn) backBtn.classList.remove('hidden');
+
+  // Build & open side panel
+  _buildPanel(entry, d);
+  const panel = document.getElementById('locDetailPanel');
+  if(panel) panel.classList.add('open');
+
+  // Force map resize after panel animation completes
+  setTimeout(()=> leafletMap && leafletMap.invalidateSize({animate:false}), 420);
+}
+
+/* ── Reset to full India view ── */
+function mapResetView(doFly=true){
+  // Close panel
+  const panel = document.getElementById('locDetailPanel');
+  if(panel) panel.classList.remove('open');
+
+  // Hide back button
+  const backBtn = document.getElementById('mapBackBtn');
+  if(backBtn) backBtn.classList.add('hidden');
+
+  // Restore marker
+  if(_selectedMarker){
+    _selectedMarker.circle.setStyle({radius: _selectedMarker.r, weight:2.5, fillOpacity:0.75});
+    _selectedMarker.circle.getElement()?.classList.remove('marker-selected');
+    _selectedMarker = null;
+  }
+
+  // Fly back
+  if(doFly && leafletMap){
+    leafletMap.flyTo(INDIA_CENTER, INDIA_ZOOM, {animate:true, duration:0.75, easeLinearity:0.3});
+  }
+
+  // Resize after panel collapses
+  setTimeout(()=> leafletMap && leafletMap.invalidateSize({animate:false}), 420);
+}
+
+/* ── Build side panel content ── */
+function _buildPanel(entry, d){
+  const {locName, locData, clr, cyberN, physN} = entry;
+
+  // Compute avg TAT for this location
+  const locRows = d.rows.filter(r=>r._loc===locName && r._tat!==null);
+  const avgTat  = locRows.length ? Math.round(locRows.reduce((s,r)=>s+r._tat,0)/locRows.length) : null;
+  const total   = locData.total||0;
+  const both    = cyberN>0 && physN>0;
+  const divLabel = both?'Cyber + Physical': cyberN>0?'Cyber':'Physical';
+  const badgeBg  = both?'rgba(96,64,160,0.12)': cyberN>0?'rgba(0,90,158,0.12)':'rgba(200,72,0,0.12)';
+
+  // Onroll / offroll for this location
+  const locOnroll  = d.rows.filter(r=>r._loc===locName&&r._roll==='Onroll').length;
+  const locOffroll = d.rows.filter(r=>r._loc===locName&&r._roll==='Offroll').length;
+
+  // Division bar widths
+  const cyPct = total ? Math.round(cyberN/total*100) : 0;
+  const phPct = total ? Math.round(physN/total*100)  : 0;
+
+  const html = `
+    <button class="loc-panel-back" onclick="mapResetView()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3L5 8l5 5"/>
+      </svg>
+      Full Map
+    </button>
+    <div class="loc-panel-city">${locName}</div>
+    <div class="loc-panel-div-badge" style="background:${badgeBg};color:${clr}">
+      <div style="width:7px;height:7px;border-radius:50%;background:${clr};flex-shrink:0"></div>
+      ${divLabel}
+    </div>
+
+    <!-- Stat tiles -->
+    <div class="loc-stat-grid">
+      <div class="loc-stat" style="--lsc:${clr}">
+        <div class="loc-stat-v">${total}</div>
+        <div class="loc-stat-l">Total Hires</div>
+      </div>
+      <div class="loc-stat" style="--lsc:#B85C00">
+        <div class="loc-stat-v">${avgTat!==null?avgTat+'<sup>d</sup>':'—'}</div>
+        <div class="loc-stat-l">Avg Offer TAT</div>
+      </div>
+      <div class="loc-stat" style="--lsc:#005A9E">
+        <div class="loc-stat-v">${locOnroll}</div>
+        <div class="loc-stat-l">Onroll</div>
+      </div>
+      <div class="loc-stat" style="--lsc:#C84800">
+        <div class="loc-stat-v">${locOffroll}</div>
+        <div class="loc-stat-l">Off-Roll</div>
+      </div>
+    </div>
+
+    <!-- Division breakdown -->
+    ${(cyberN>0||physN>0)?`
+    <div class="loc-div-section">
+      <div class="loc-div-label">Division Split</div>
+      ${cyberN>0?`
+      <div class="loc-div-row">
+        <div class="loc-div-name" style="color:#005A9E">Cyber</div>
+        <div class="loc-div-bar-wrap"><div class="loc-div-bar-fill" style="width:${cyPct}%;background:#005A9E"></div></div>
+        <div class="loc-div-count">${cyberN}</div>
+      </div>`:''}
+      ${physN>0?`
+      <div class="loc-div-row">
+        <div class="loc-div-name" style="color:#C84800">Physical</div>
+        <div class="loc-div-bar-wrap"><div class="loc-div-bar-fill" style="width:${phPct}%;background:#C84800"></div></div>
+        <div class="loc-div-count">${physN}</div>
+      </div>`:''}
+    </div>`:''}
+
+    <!-- TAT highlight -->
+    ${avgTat!==null?`
+    <div class="loc-tat-section">
+      <div class="loc-tat-label">Avg Offer TAT</div>
+      <div class="loc-tat-value">${avgTat}<span style="font-size:16px;font-weight:600">d</span></div>
+      <div class="loc-tat-sub">Based on ${locRows.length} hire${locRows.length!==1?'s':''} with TAT data</div>
+    </div>`:''}
+  `;
+
+  const inner = document.getElementById('locPanelInner');
+  if(inner) inner.innerHTML = html;
+}
+
+function renderProjectChart(d){} // retained for compatibility — map+panels replace charts
+function renderLocationChart(d){} // retained for compatibility
+function renderProjectTable(d){}  // table removed — panels show all data
+
+
+/* ═══ UI HELPERS ════════════════════════════════════════════ */
+function showTab(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+  btn.classList.add('on');
+  // Geography tab: Leaflet needs a size-recalculation after display:block paints
+  if(id==='projects' && leafletMap){
+    // Two-pass: one rAF to let the DOM paint, one timeout for safety
+    requestAnimationFrame(()=>{
+      leafletMap.invalidateSize({animate:false});
+      setTimeout(()=> leafletMap.invalidateSize({animate:false}), 120);
+    });
+  }
+}
+function toast(msg,dur=3200){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+/* ═══ BOOT ══════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  // attachDrop('ubDrop');
+  // No embedded data — always require file upload. This ensures Excel is the sole source of truth.
+  // document.getElementById('uploadOverlay').classList.add('open');
+  // document.getElementById('statusDot').className='dot warn';
+  // document.getElementById('tsLabel').textContent='Upload Excel to load';
+});
+loadLiveDashboard();
+
+let isRefreshing = false;
+
+setInterval(async () => {
+
+  if(isRefreshing){
+
+    console.log("Refresh skipped - previous refresh still running");
+
+    return;
+
+  }
+
+  try{
+
+    isRefreshing = true;
+
+    console.log("Refreshing dashboard...");
+
+    await loadLiveDashboard();
+
+  }catch(error){
+
+    console.error("Refresh cycle failed:", error);
+
+  }finally{
+
+    isRefreshing = false;
+
+  }
+
+}, 15000);
+</script>
+</body>
+</html>
